@@ -1,0 +1,475 @@
+<link rel="import" href="../polymer/polymer.html">
+
+<link rel="import" href="../iron-image/iron-image.html">
+
+<link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../iron-flex-layout/iron-flex-layout-classes.html">
+
+<link rel="import" href="../paper-button/paper-button.html">
+<link rel="import" href="../paper-toggle-button/paper-toggle-button.html">
+
+<link rel="import" href="../paper-input/paper-input.html">
+<link rel="import" href="../paper-styles/color.html">
+
+<link rel="import" href="fire-icons.html">
+<link rel="import" href="fire-base-lib.html">
+<link rel="import" href="fire-base.html">
+
+<!--
+`fire-shield` manages app-access based on firebase-utility.  
+
+@element fire-shield
+@demo demo/index.html
+-->
+
+
+<dom-module id="fire-shield">
+
+  <template>
+
+    <style>
+      :host {
+        display: block;
+        /*padding: 10px;*/
+      }
+
+      .flex-horizontal {
+        @apply(--layout-horizontal);
+      }   
+
+      .flex-vertical {
+        @apply(--layout-vertical);
+      }   
+      .flex {
+        @apply(--layout-flex);
+      }
+
+      div.hidden {
+        display: none;
+      }
+      /* Splash Page */
+      #splashpage {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          color: white;
+          background-color: #0288D1;
+          background: radial-gradient(circle, #039BE5, #01579b);
+          z-index: 10000;
+
+          align-items: center;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+      }     
+
+      .headline {
+        text-align: center;
+        font-size: 14px;  
+        margin: 20px 0px;      
+      }
+      .guiline {
+        text-align: center;
+        font-size: 12px;  
+        color: grey;
+      } 
+
+      #email-auth-form {
+        margin-top: 25px;
+        padding: 5px;
+        background-color: lightgrey;
+        font-size: 14px;
+        color: black;
+      }
+
+    </style>
+
+    <fire-base app="[[app]]" fb="{{fb}}"></fire-base>
+
+    <div id="splashpage"> 
+
+      <div>
+        <!-- <template is="dom-if" if="{{user.isAnonymous}}"> -->
+        <template is="dom-if" if="{{startflag}}">
+
+          <div class="headline">Explore basic services anonymously</div>
+
+          <div class="headline"><paper-button on-tap="loginAnonym" raised>Go</paper-button></div>
+
+          <div class="headline">otherwise</div>
+        
+        </template>
+      </div>
+
+      <div class="headline">become an authorized user</div>
+
+      <div>
+        <paper-button on-tap="loginEmail" raised>Mail</paper-button>
+        <paper-button on-tap="loginGoogle" raised>Google</paper-button>
+      </div>
+
+      <!-- Email identification -->
+      <div id="email-auth-form" class="hidden">
+      
+        <div>  
+          <div id="signbuttons">
+            <paper-button on-tap="signInEmailEvent" raised id="signin" name="signin">Sign In</paper-button> <!-- disabled -->
+            <paper-button on-tap="signUpEmailEvent" raised disabled id="signup" name="signup">Sign Up</paper-button>
+          </div>
+   
+          <div class="container flex-vertical"> 
+            <paper-input value="{{email}}" id="email" label="Email"></paper-input>
+            <paper-input type="password" value="{{password}}" id="password" label="Password"></paper-input>
+            <div id="emailverify" class="hidden">
+              <paper-button on-tap="sendEmailVerification" raised name="emailverify">Verify this account</paper-button>
+              <div class="guiline">than SignIn again</div>
+            </div>  
+          </div>
+        </div>
+
+        <div class="hidden" id="userprofile">
+          <paper-toggle-button on-change="signUpProfile">Additional identification</paper-toggle-button>
+          <div id="userprofileform" class="hidden"> 
+            <paper-input  value="{{displayname}}" id="displayname" label="stageName"></paper-input>
+            <paper-input  value="{{photourl}}"    id="photourl" label="stageIcon"></paper-input>
+          </div>
+        </div>
+        
+        <div class="hidden" id="usersetup">
+          <paper-button on-tap="sendPasswordReset" raised id="emailpassword" name="emailpassword">Change Pwd</paper-button>
+          <paper-button on-tap="sendGo" raised id="emailgo" name="emailgo">GO</paper-button>
+        </div>
+      </div>
+
+    </div>       
+
+  </template>
+
+  <!-- Creates the element's prototype and registers it -->
+  <script>
+
+    Polymer({
+
+      is: 'fire-shield',
+      
+      properties: {
+
+        startflag: 0,
+
+        app: {  
+          type: String
+        },
+
+        fb: {
+          type: Object,
+          observer: 'authObserver'
+        },
+
+        email: {
+          type: String,
+          value: ""
+        },
+        password: {
+          type: String,
+          value: ""
+        },
+        displayname: {
+          type: String,
+          value: ""
+        },
+        photourl: {
+          type: String,
+          value: ""
+        },
+        user: {
+          type: Object,
+          value: {}, 
+          notify: true        
+        }, 
+        toast : {
+          type: String,
+          notify: true
+        }
+      },
+
+      observers: [
+      ],
+
+      ready: function() { // console.log("fb-shield ready"); 
+         this.uploadpath = this.path;
+       },
+        
+      authObserver: function(fb, fbold) {  // console.log("authObserver in fb=", fb);
+        if (!fb || (typeof fb.auth !== "function")) return;  
+        
+        var that = this;
+        var splashpage  = this.$.splashpage,
+            signbuttons = this.$.signbuttons,
+            usersetup   = this.$.usersetup,
+            userprofile = this.$.userprofile,
+            userverify  = this.$.emailverify,
+            usergo      = this.$.emailgo,
+            userpassword= this.$.emailpassword;
+
+        fb.auth().onAuthStateChanged(function(user) { 
+          if (user && !user.isAnonymous) {  // console.log("new user ", user.email, user.emailVerified);
+              
+              if (user.emailVerified) {
+                splashpage.style.display = 'none';
+
+              } else {
+
+                signbuttons.classList.add("hidden");
+                userverify.classList.remove("hidden");
+              }
+
+              // ACTIVATE user in CLIENT
+              that.user = user;
+              // LOG user in DB   
+              // writeUserData(
+              //     user.uid, 
+              //     user.displayName, 
+              //     user.email, 
+              //     user.photoURL
+              // );
+          } else {
+            splashpage.style.display = '';
+          } // console.log("user after AuthStateChanged:",that.user); 
+        });
+      },
+
+      loginGoogle: function() { // console.log("loginGoogle for", this.fb); 
+        // library 'firebase.js' must be locally available in this element
+        var provider = new firebase.auth.GoogleAuthProvider();     
+        // var provider = new firebase.auth.GithubAuthProvider(); // Alternativ
+        this.fb.auth().signInWithPopup(provider)
+          .then(function(){         console.log("GoogleAccount SignIn OK.") 
+          })
+          .catch(function(error) {  console.error('GoogleAccount SignIn Error', error);
+            this.user = null;
+          });
+      },
+
+      loginAnonym: function() { //console.log("loginAnonym for", this.fb); 
+
+        var splashpage = this.$.splashpage;
+        splashpage.style.display = 'none';
+      },
+
+      loginEmail: function() {   
+        // toggle visibility of email-auth-form
+        Polymer.dom(this.root).querySelector('#email-auth-form').classList.toggle('hidden');
+      },
+
+      /**
+       * Handling the email-signIn(signUp)
+       */
+      signInEmailEvent: function(e) { //, email, password) { console.log(e,email,password);
+        var currentUser = this.fb.auth().currentUser;
+        if (currentUser) { // console.log("signing out:", currentUser);
+          // [START signout]
+           
+          var that = this; 
+          this.fb.auth().signOut().then(function(){
+            that.signInEmail();
+          }) ; 
+          // [END signout]
+        } else { 
+          this.signInEmail();
+        }
+      },
+
+      signUpEmailEvent: function(e) { //, email, password) { console.log(e,email,password);
+        var currentUser = this.fb.auth().currentUser;
+        if (currentUser) { console.log("signing out:", currentUser.email);
+          // [START signout]
+          var that = this; 
+          this.fb.auth().signOut().then(function(){
+            that.signUpEmail();
+          }) ; 
+          // [END signout]
+        } else { 
+          this.signUpEmail();
+        }
+      },
+
+      signInEmail: function() {
+
+        email    = this.email;
+        password = this.password;
+
+        if (email.length < 6) {
+          this.toast = 'Please enter an email-address (charcount>5).';
+          // alert(this.toast);
+          return;
+        }
+        if (password.length < 6) {
+          this.toast = 'Please enter an password (charcount>5).';
+          // alert('Please enter a password (charcount>5).');
+          return;
+        } // console.log("emailSignIn.LOG:", email, password); 
+        
+        // Sign in with email and pass.
+        // [START authwithemail]
+        var that = this; 
+        this.fb.auth().signInWithEmailAndPassword(email, password)
+        .then(function(user) {   
+          if (user.displayName) that.toast = "You logged in as "+ user.displayName + "!";
+          else    console.log("EmailLogin OK: ",user.email, user.displayName, user.emailVerified); // , email, password);
+        }) 
+        .catch(function(error) {
+          // Handle Errors here.
+          var errorCode = error.code;
+          var errorMessage = error.message;
+
+          // [START_EXCLUDE]
+          if (errorCode === 'auth/wrong-password') {
+            that.toast = 'Wrong password.';
+            // alert();
+          } else {
+            that.toast = errorMessage;  // alert(errorMessage);
+
+            // Try again with signUp as new user 
+            that.$.signin.disabled = true;
+            that.$.signup.disabled = false;
+            that.$.userprofile.classList.remove("hidden");
+
+            // usersetup.classList.remove("hidden");
+            // userverify.disabled = false;
+            // usergo.disabled = true;
+            // if (!user.displayName) {
+            // } 
+
+          } // console.log("ErrorLog:", error);
+          
+
+          // [END_EXCLUDE]
+        });
+        // [END authwithemail]
+        // Polymer.dom(this.root).querySelector('#quickstart-sign-in').disabled = true;
+      },
+
+      signUpEmail: function() {
+        var email     = this.email;
+        var password  = this.password;
+        if (email.length < 6) {
+          this.toast = 'Please enter an email address.';
+          // alert();
+          return;
+        }
+        if (password.length < 6) {
+          this.toast = 'Please enter a password.';
+          // alert();
+          return;
+        }
+        // SignUp with email and passwd.
+        // [START createwithemail]
+        var that = this;
+        this.fb.auth().createUserWithEmailAndPassword(email, password)
+          .then(function(user) {  console.log("signedUp as:", user);
+            that.$.emailverify.classList.remove("hidden");
+            that.$.signin.disabled = false;
+            that.$.signup.disabled = true;
+
+            // 
+            that.setUserProfile(user);
+
+          })
+          .catch(function(error) { // Handle Errors here.
+            var errorCode = error.code;
+            var errorMessage = error.message;
+            // [START_EXCLUDE]
+            if (errorCode == 'auth/weak-password') {
+              that.toast = 'The password is too weak.';    // alert();
+
+            } else if (errorCode == 'auth/email-already-in-use') {
+              that.toast = 'The email address is used by an existing account.';  // alert();
+              that.$.signin.disabled = false;
+              that.$.signup.disabled = true;
+
+            } else {
+              that.toast = errorMessage;  // alert(errorMessage);
+            } console.log(error);
+            // [END_EXCLUDE]
+        });
+        // [END createwithemail]
+      },
+
+      signUpProfile: function() {
+        this.$.userprofileform.classList.toggle("hidden");
+      },
+
+      /**
+       * [setUserProfile description]
+       */
+      setUserProfile: function(user, displayname, photourl){
+        // some basic features may be managed from client!!
+        if (!displayname) displayname  = this.displayname;
+        if (!photourl)    photourl     = this.photourl;
+        if (!displayname && !photourl) {
+          this.tast="You may enhance your userprofile later.";
+          return;
+        }  
+        user.updateProfile({
+          displayName: displayname,
+          photoURL: photourl
+        }).then(function() {
+          console.log("Profile-Update successful.");
+        }, function(error) {
+          console.log("Profile-Update failed.", error);    // An error happened.
+        });
+      },
+
+      sendEmailVerification: function() {
+        // [START sendemailverification]
+        var signbuttons = this.$.signbuttons,
+            userverify  = this.$.emailverify,
+            that = this;
+
+        this.fb.auth().currentUser.sendEmailVerification().then(function() {
+          // Email Verification sent!
+          // [START_EXCLUDE]
+          signbuttons.classList.remove("hidden");
+          userverify.classList.add("hidden");
+          that.toast = 'Email Verification Sent!';
+          // alert();
+
+          // [END_EXCLUDE]
+        });
+        // [END sendemailverification]
+      },
+
+      sendPasswordReset: function() {
+        var email = this.email;
+        // [START sendpasswordemail]
+        this.fb.auth().sendPasswordResetEmail(email).then(function() {
+          // Password Reset Email Sent!
+          // [START_EXCLUDE]
+          that.toast = 'Password Reset Email Sent!'; 
+          // alert();
+          // [END_EXCLUDE]
+        }).catch(function(error) {
+          // Handle Errors here.
+          var errorCode    = error.code;
+          var errorMessage = error.message;
+          // [START_EXCLUDE]
+          if (errorCode == 'auth/invalid-email') {
+            that.toast = errorMessage;
+            // alert(errorMessage);
+          } else if (errorCode == 'auth/user-not-found') {
+            that.toast = errorMessage;
+            // alert(errorMessage);
+          }
+          console.log(error);
+          // [END_EXCLUDE]
+        });
+        // [END sendpasswordemail];
+      }
+
+    });
+
+  </script>
+
+</dom-module>

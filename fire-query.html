@@ -1,0 +1,169 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="fire-base.html">
+<!--
+`fire-query` is the generic firebase-data-query element 
+as well for pull-queries as for push-queries(save)  
+
+@element fire-query
+@demo demo/cloud-query.html
+-->
+
+<dom-module id="fire-query">
+
+  <template>
+
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+    
+    <fire-base app="{{app}}" fb="{{fb}}" ></fire-base>
+
+  </template>
+
+  <script>
+
+    Polymer({
+      is: 'fire-query',
+      properties: {
+
+        app: {  
+          type: String
+        },
+
+        fb: {
+          type: Object
+        },
+
+        path:{
+          type: String
+        },
+
+        key: {
+          type: String
+        },  
+
+        item: {         // query(order)Item
+          type: String  //, value: '_path_' 
+        },
+        
+        // queryValue (of orderItem)
+        itemvalue:{     
+          type: String  
+        },
+
+        // optional flag used for requeries 
+        trigger: 1,      
+
+        // operator(relating queryItem and queryValue)
+        operator: {      
+          type: String
+        },
+
+        data: {
+          type: Object,
+          notify: true
+        },
+
+        setdata: {
+          type: Object
+        }, 
+        
+        toast : {
+          type: String,
+          notify: true
+        }
+      },
+
+      observers: [
+        '_applyPathQuery(fb, path)',//, trigger)',
+        '_applyItemQuery(fb, path, item, itemvalue)',  // trigger)',
+        '_applyPathSave(fb, setdata, path, key)'       // 
+      ],
+
+      ready: function() { // console.log("firequery-ready");
+
+      },
+
+      /* */  
+      _applyPathQuery: function(fb, path, trigger) { 
+
+        if (this.item=="_path_") {  // console.log("_applyPathQuery, path=", path, fb); 
+
+          var that = this; // ALTMODISCH (use bind() instead?)
+          fb.database().ref(path).once('value').then(function(snapshot) { 
+            // console.log("snapped pathmode", snapshot.val());
+            that.data = snapshot.val();
+          })
+        }
+      },
+
+      /* */
+      _applyItemQuery: function(fb, path, item, value) {  //console.log("_applyItemQuery: ", "path="+path,"var="+ item,"val="+ value); 
+
+        var ref  = fb.database().ref(path).orderByChild(item);
+
+        if (value && (value != '_all_') ) {
+          var op = this.operator;
+          if (!op) {
+            ref = ref.equalTo(value);
+          } else { console.log("use of operator '"+op+"' not implemented!"); 
+
+          } // console.log("_applyItemQuery prepared: ", ref); 
+        } 
+
+        // OPTIONAL 
+        var count = this.count; 
+        if (count > 0) { 
+          ref = ref.limitToFirst(count)
+          console.log("apply count to ref: ",count, ref);
+        } 
+
+        var that = this; // ALTMODISCH (use bind() instead?)
+
+        // APPLY the query 
+        ref.once('value')
+            .then(function(snapshot) {  // console.log("snapshot-value", snapshot.val());
+              that.data = snapshot.val();
+            })
+            .catch( function (errorObject) {
+              console.log("The read failed: " + errorObject.code);  
+            });
+      },
+
+      /* */ 
+      _applyPathSave: function(fb, dbData, dbPath, dbKey) { 
+
+        // save the doc-reference to database
+        if (!Object.keys(dbData).length) { console.log("Missing data to submit")
+          return; 
+        } //console.log("triggered to save at path:", dbPath, dbData);
+        
+        // 1. 
+        if (!fb.database().ref().child(dbPath)) { // target-path-node must exist to enable key-generator
+          fb.database().ref(dbPath).set([]);
+        }  
+
+        // 2. Get unique key for the dataObject at the target path
+        if (!dbKey) dbKey = fb.database().ref().child(dbPath).push().key;   // console.log("dbDataSubmit", dbKey, dbData); // return;
+
+        //  3. Store&check the dataObject
+        //  3.1 STORE
+        fb.database().ref(dbPath+'/'+dbKey).set(dbData);  // console.log("save at:", dbPath+'/'+dbKey);
+        
+        //  3.2 CHECK
+        var that = this;
+        fb.database().ref(dbPath+'/'+dbKey).once('value').then(function(snapshot) { // console.log("data saved with key "+dbKey, snapshot.val());
+            that.lastpath = dbPath+'/'+dbKey; 
+        })
+
+        // 3.3 reset the key !! to avoid save with altered data !!
+        
+        this.key = undefined; 
+      }  
+
+    });
+  </script>
+
+</dom-module>

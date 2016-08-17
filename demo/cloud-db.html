@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+<head>
+  <title>fire-base demo</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes">
+  <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+
+  <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+  <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+
+  <link rel="import" href="../fire-base.html">
+
+  <style is="custom-style" include="demo-pages-shared-styles">
+  </style>
+</head>
+
+<body>
+
+  <div>Demo of <span style="font-family: courier;">fire-base</span></div>
+
+  <dom-module id="cloud-db">
+
+    <template>
+    
+      <style>
+        :host {
+          display: block;
+          padding: 10px;
+        }
+      </style>
+      
+      <template is="dom-if" if="{{fbapp}}">
+        <fire-base app="{{fbapp}}" fb="{{fb}}" ></fire-base>
+      </template>
+
+      <p>fb configured for "[[fbapp]]":</p>
+      <pre id="log"></pre>
+
+    </template>
+
+    <script>
+
+      Polymer({
+
+        is: 'cloud-db',
+        
+        properties: {
+          
+          fbapp : "",
+
+          fb: {
+            type:Object,
+            observer: 'showfb'
+          }
+
+        },
+
+        ready: function(){
+          this.fbapp = "wolke7";    
+        },
+
+        showfb: function(n,o){ console.log("logging", n.T)
+          this.$.log.innerHTML = JSON.stringify(n.T);   
+        }
+
+      });
+    </script>
+
+  </dom-module>
+
+  <cloud-db></cloud-db>
+
+</body>
+</html>

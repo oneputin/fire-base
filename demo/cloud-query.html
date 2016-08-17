@@ -1,0 +1,168 @@
+<!doctype html>
+<html>
+<head>
+  <title>fire-base demo</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes">
+  <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+
+  <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+  <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+
+  <link rel="import" href="../../paper-tabs/paper-tabs.html">
+  <link rel="import" href="../../iron-image/iron-image.html">
+
+  <link rel="import" href="../fire-query.html">
+
+  <style is="custom-style" include="demo-pages-shared-styles">
+  </style>
+</head>
+
+<body>
+
+  <div>Demo of <span style="font-family: courier;">fire-query</span></div>
+
+  <dom-module id="cloud-types">
+
+    <template>
+    
+      <style>
+        :host {
+          display: block;
+          padding: 10px;
+        }
+        h1 {
+          font-size: 22px;
+          margin: 16px 0;
+          color: #212121;
+        }
+        .small {
+          font-size:10px;
+        }
+        .pre {
+          font-style: italic;
+        }
+      </style>
+
+      <paper-tabs selected="{{tabindex}}">
+        <paper-tab>Heap </paper-tab>
+        <paper-tab>Sheet</paper-tab>
+        <paper-tab>Fleecy</paper-tab>
+      </paper-tabs>
+
+      <fire-query app="wolke7" path="cp" item="type-character" itemvalue="[[itemvalue]]" data="{{data}}"></fire-query>
+
+      <p>Imagegroups of clouds with different form-character <a href="https://www.rmets.org/weather-and-climate/observing/luke-howard-and-cloud-names" target="_blank">(Howard/1802)</a>.</p>
+      
+      <template is='dom-repeat' items='{{imas}}' as='img'>
+        <div>
+          <span class="small">[[img.index]]</span>
+          <span>[[img.title]]</span>
+          <span class="pre">[[img.url]]</span>
+        </div>
+      </template>
+
+    </template>
+
+    <script>
+      window.addEventListener('WebComponentsReady', function() {
+        Polymer({
+
+          is: 'cloud-types',
+          
+          properties: {
+            
+            fbapp : "",
+
+            tabindex : -1,  // = index of query-path-options
+
+            path:  {
+              type: String
+            },
+
+            items:{
+              type: Array,
+              observer: 'useItems'
+            },
+
+            values:{
+              type: Array,
+              observer: 'useValues'
+            },
+
+            item: "", 
+            
+            itemvalue: {
+              type: String,
+              computed: 'calcValue(tabindex)'
+            },
+
+            data: {
+              type: Object,
+              value: [] 
+            },
+
+            imas: {
+              type: Object,
+              computed: 'createSlides(data)'
+            }
+          },
+
+          observers : [
+            // 'calcTarget(fbapp, path)'
+          ], 
+
+          ready: function(){
+            this.tabindex = 0;    // triggers view of FIRST Query-set
+            // this.item      = "type-character";
+            // this.itemvalue = 'none';
+            // this.item  = "type-year";
+            // this.itemvalue = 2002;
+          },
+
+          useItems: function(n,o) { console.log("query items:", n);
+
+          },
+          useValues: function(n,o) {  console.log("query values:", n);
+
+          },
+
+          calcValue: function(index) {
+            var items = {0:"heap",1:"sheet",2:"fleecy"};
+                value = items[index];
+            return value;
+          },
+
+          // 
+          createSlides: function(data, olddata) { 
+            if (!data) return;
+            if (!Array.isArray(data)) {
+              data =  Object.keys(data).map(function(k){return data[k]});
+            }  console.log("Howard: dataArray", data); 
+
+            // Prepare a standard-array (url, item) for "slide-show"
+            var ima , title, index, nn = data.length, imas = [];
+            data.forEach(function(item,index){  // console.log(index, item);
+              index = "("+ (index+1) +"/" + nn +") ";
+              title = item["title-main-pict"] ;
+              if (item["title-sub-pict"]) title = title+" / "+item["title-sub-pict"] ;
+              ima = {
+                url: item.url,
+                title: title,
+                index: index
+              }
+              imas.push(ima)
+            }); console.log("slideArray-length=", imas.length);
+            return imas; 
+          }
+
+        });
+      });   
+    </script>
+
+  </dom-module>
+
+  <cloud-types></cloud-types>
+
+</body>
+</html>

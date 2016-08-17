@@ -1,0 +1,131 @@
+<link rel="import" href="../polymer/polymer.html">
+
+<!-- <link rel="import" href="fire-base-lib.html"> -->
+<link rel="import" href="fire-base.html">
+
+<dom-module id="fire-store">
+
+  <template>
+
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+
+    <fire-base app="[[app]]" fb="{{fb}}" authmode="{{authmode}}" user="{{user}}"></fire-base>
+
+  </template>
+
+  <script>
+
+    Polymer({
+      is: 'fire-store',
+      properties: {
+
+        app: {  
+          type: String
+        },
+
+        fb: {
+          type: Object, 
+          notify: true
+        },
+
+        authmode:{
+          type: String 
+        },
+
+        user: {     // an "authorized user" is required for fb storage actions 
+          type: Object,
+          value: {},
+          observer: 'debugLog'
+        },
+
+        path:{
+          type: String 
+        },
+
+        srcfile: {     // triggers upload
+          type: Object,
+          observe: 'debugLog' 
+        },
+
+        srcmeta: {     // optional addon to upload
+          type: Object 
+        },
+
+        queryurl: {    // triggers download     
+          type: String
+        },
+
+        response: {
+          type: Object,
+          notify: true
+        }
+      },
+
+      observers: [
+        'applyStorageQuery(fb, path, queryurl, user)',
+        'applyStorageUpload(fb, srcfile, path, user)'
+      ],
+
+      ready: function() { // console.log("firequery-ready");
+        if (!this.authmode ||(this.authmode==undefined)) { 
+          this.authmode="anonym"; 
+        }
+      },
+      
+      debugLog: function(obj, objold){ // console.log("Log of object/context:", obj, this);
+
+      },
+
+      applyStorageUpload: function(fb, file, uploadpath, user) { console.log("start storageUpload ", user, uploadpath, fb, file);
+        // store an Object to fb-storage !! together with metadata !!
+        var that = this;  
+
+        var metadata = { // storage-object meta !!
+          'contentType': file.type
+        }   
+
+        if (this.srcmeta) { // created independently
+          metadata["customMetadata"] = this.srcmeta;
+        } console.log("Metadata of new storageObj [" + file.name+"]", metadata);
+
+        var uploadRef = fb.storage().ref(uploadpath);        
+       
+        var storeTask = uploadRef.child(file.name).put(file, metadata);  // STORE-TASK 
+
+        // Listen for errors and completion of the upload.
+        storeTask.on('state_changed', 
+          null, 
+          function(error) {
+            that.serverurl = "" ; // hide the last img !!
+            console.error('STORETASK failed:', error);
+          }, 
+          function() {  
+            var snap  = storeTask.snapshot;  
+            // var bytes = snap.totalBytes; 
+            that.response = snap.metadata;   
+            // that.storageurl = that.response.downloadURLs[0];  
+            // console.log('responsemeta ', that.response ); 
+        });
+      },
+
+      applyStorageQuery: function(fb, path, queryurl) {  console.log("BREAK at start storage query"); return; 
+        
+        if (this.item=="_path_") {  // console.log("applyPathQuery, path=", path); 
+          if (!cloudFB) this.initFB();
+
+          var that = this; // ALTMODISCH (use bind() instead?)
+          
+          fb.database().ref(path).once('value').then(function(snapshot) { 
+            // console.log("snapped pathmode", snapshot.val());
+            that.data = snapshot.val();
+          })
+        }
+      }
+
+    });
+  </script>
+</dom-module>

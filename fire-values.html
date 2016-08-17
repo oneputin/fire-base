@@ -1,0 +1,117 @@
+<link rel="import" href="../polymer/polymer.html">
+
+<link rel="import" href="fire-query.html">
+
+<!--
+`fire-values` is an element that queries firebase-data.  
+
+@element fire-values
+@demo demo/index.html
+-->
+
+<dom-module id="fire-values">
+
+  <!-- Defines the element's style and local DOM -->
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+
+    <fire-query app="[[app]]" path="[[path]]" item="[[item]]" itemvalue="_all_" data="{{data}}" trigger="{{trigger}}"></fire-query>
+
+    <!-- <div>query values</div> -->
+
+  </template>
+
+  <!-- Creates the element's prototype and registers it -->
+  <script>
+
+    Polymer({
+
+      is: 'fire-values',
+      
+      properties: {
+        // firebase-app
+        app:  {
+          type: String
+        },
+        // path to query
+        path:  {
+          type: String
+        },
+
+        item: {
+          type: String
+        }, 
+        
+        filter: {
+          type: String // , value: "type"
+        },
+        
+        trigger: 1,
+
+        data: {
+          type: Object,
+          value: []
+        },
+
+        values: {
+          type: Object,
+          notify: true,
+          computed: 'filterValues(data)'
+        } 
+
+      },
+
+      observers : [
+        // 'calcTarget(app, path)'
+      ], 
+
+      ready: function(){
+        // this.item  = "type-year";
+        // this.itemvalue = 2002;
+      },
+
+      // Extracting ...
+      filterValues: function(data, olddata) { 
+        if (!data) return;
+
+        if (!Array.isArray(data)) {
+          data =  Object.keys(data).map(function(k){return data[k]});
+        } // console.log(data);
+
+        // Collect all values used in data-objects (z.B. img-metadata)
+        var queryname = this.item, 
+            values=[], 
+            nn=data.length;
+
+        data.forEach(function(item,index){  // console.log(index, item);
+          if (!item[queryname] || item[queryname] === null || item[queryname] === undefined) return; 
+          // values.push(item[queryname]);
+          values = values.concat(item[queryname]).filter(function(v,i,self){
+              return self.indexOf(v) === i;
+          });
+        }); // console.log("values(n="+values.length+")", values);
+        if (!values.length) return values;
+
+        if (this.filter) { 
+          var  arr=[], filter = this.filter; console.log("filter", filter);
+          values.forEach(function(item,index){  
+            var n = item.indexOf(filter); // console.log(index, item, n);
+            if ( n < 0) return; // console.log(index, item, n);
+            arr.push(item); 
+          }); // console.log("fkeys(n="+fkeys.length+")", fkeys);
+          values = arr; 
+        } else {
+          values.sort();
+        }// console.log("values(n="+values.length+")");
+        
+        return values; 
+      }
+
+    });
+  </script>
+
+</dom-module>

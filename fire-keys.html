@@ -1,0 +1,112 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="fire-query.html">
+
+<!--
+`fire-keys` returns the keys of queried firebase-data.  
+
+@element fire-keys
+@demo demo/index.html
+-->
+
+<dom-module id="fire-keys">
+
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+
+    <fire-query app="[[app]]" path="[[path]]" item="[[item]]" itemvalue="[[itemvalue]]" data="{{data}}" trigger={{trigger}}></fire-query>
+
+  </template>
+
+  <script>
+
+    Polymer({
+
+      is: 'fire-keys',
+      
+      properties: {
+
+        app:  {
+          type: String
+        },
+
+        path:  {
+          type: String
+        },
+
+        item: {
+          type: String,
+          value: "_path_"
+        }, 
+        
+        itemvalue: {
+          type: String
+        },
+
+        filter: {
+          type: String // , value: "type"
+        },
+        
+        trigger: 1,
+
+        data: {
+          type: Object,
+          value: []
+        },
+
+        keys: {
+          type: Object,
+          notify: true,
+          computed: 'filterKeys(data)'
+        }, 
+
+        key: {
+          type: String,
+          notify:true
+        }
+
+      },
+
+      observers : [
+        // 'calcTarget(app, path)'
+      ], 
+
+      ready: function(){
+        // this.item  = "type-year";
+        // this.itemvalue = 2002;
+      },
+
+      filterKeys: function(data, olddata) { 
+        if (!data) return;
+        if (!Array.isArray(data)) {
+          data =  Object.keys(data).map(function(k){return data[k]});
+        } // console.log(data);
+
+        // Collect all keys used in data-objects(items)
+        var keys=[], itemkeys, nn=data.length;
+        data.forEach(function(item,index){  // console.log(index, item);
+          itemkeys = Object.keys(item);
+          keys = keys.concat(itemkeys).filter(function(v,i,self){
+              return self.indexOf(v) === i;
+          });
+        }); // console.log("keys(n="+keys.length+")"); // , keys);
+        
+        if (keys.length && this.filter) { 
+          var  fkeys=[], filter = this.filter; // console.log("filter", filter);
+          keys.forEach(function(item,index){  
+            var n = item.indexOf(filter); // console.log(index, item, n);
+            if ( n < 0) return; // console.log(index, item, n);
+            fkeys.push(item); 
+          }); // console.log("fkeys(n="+fkeys.length+")", fkeys);
+          keys = fkeys; 
+        } // console.log("fkeys(n="+keys.length+")");
+        return keys; 
+      }
+
+    });
+  </script>
+
+</dom-module>
