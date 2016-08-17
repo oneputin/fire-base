@@ -5,7 +5,7 @@
     "GIA"
   ],
   "description": "Apply fire-base infrastructure",
-  "main": "fire-query.html",
+  "main": "fire-fire.html",
   "dependencies": {
     "polymer": "Polymer/polymer#^1.4.0",
     "iron-image": "PolymerElements/iron-image#^1.2.4",
