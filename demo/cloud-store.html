@@ -20,7 +20,11 @@
 
 <body>
 
-  <div>Demo of <span style="font-family: courier;">fire-query</span></div>
+  <div>
+    <h5>Demo of <span style="font-family: courier;">fire-store</span></h5>
+    <p>Saves a (cloud)image (+ tech metadata) into FB-storage 
+    and its semantic metadata into FB-Database</p>
+  </div>
 
   <dom-module id="cloud-types">
 
@@ -50,7 +54,7 @@
         <paper-tab>Fleecy</paper-tab>
       </paper-tabs>
 
-      <fire-query app="wolke7" path="cplocal" item="type-character" itemvalue="[[itemvalue]]" data="{{data}}"></fire-query>
+      <fire-query app="wolke7" path="cp" item="type-character" itemvalue="[[itemvalue]]" data="{{data}}"></fire-query>
 
       <p>Imagegroups of clouds with different form-character <a href="https://www.rmets.org/weather-and-climate/observing/luke-howard-and-cloud-names" target="_blank">(Howard/1802)</a>.</p>
       

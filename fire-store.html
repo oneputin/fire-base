@@ -1,7 +1,12 @@
 <link rel="import" href="../polymer/polymer.html">
-
-<!-- <link rel="import" href="fire-base-lib.html"> -->
 <link rel="import" href="fire-base.html">
+
+<!--
+`fire-store` manages the transfer of data to/from the FB-storage
+
+@element fire-store
+@demo demo/cloud-db.html
+-->
 
 <dom-module id="fire-store">
 
@@ -46,16 +51,19 @@
           type: String 
         },
 
-        srcfile: {     // triggers upload
+        // triggers upload
+        srcfile: {     
           type: Object,
           observe: 'debugLog' 
         },
 
-        srcmeta: {     // optional addon to upload
+        // optional addon to uploaded object(srcfile)
+        srcmeta: {     
           type: Object 
         },
 
-        queryurl: {    // triggers download     
+        // triggers download of a storeObject into file 
+        queryurl: {         
           type: String
         },
 
@@ -66,8 +74,8 @@
       },
 
       observers: [
-        'applyStorageQuery(fb, path, queryurl, user)',
-        'applyStorageUpload(fb, srcfile, path, user)'
+        'applyStorageUpload(fb, srcfile, path, user)',
+        'applyStorageQuery(fb, path, queryurl, user)'
       ],
 
       ready: function() { // console.log("firequery-ready");
@@ -80,8 +88,9 @@
 
       },
 
+      /* store an Object to fb-storage, optionally together with metadata !!
+      */ 
       applyStorageUpload: function(fb, file, uploadpath, user) { console.log("start storageUpload ", user, uploadpath, fb, file);
-        // store an Object to fb-storage !! together with metadata !!
         var that = this;  
 
         var metadata = { // storage-object meta !!

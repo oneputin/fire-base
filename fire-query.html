@@ -1,9 +1,10 @@
 <link rel="import" href="../polymer/polymer.html">
 <link rel="import" href="fire-base.html">
 <!--
-`fire-query` is the generic firebase-data-query element 
-as well for pull-queries as for push-queries(save)  
-
+`fire-query` is the generic firebase-data-query element as well 
+- for pull-queries (get) , if  as 
+- for push-queries (save)  
+The actions are triggered by changes 
 @element fire-query
 @demo demo/cloud-query.html
 -->
@@ -44,17 +45,15 @@ as well for pull-queries as for push-queries(save)
           type: String
         },  
 
-        item: {         // query(order)Item
-          type: String  //, value: '_path_' 
+        // query(order)Item
+        item: {         
+          type: String   
         },
         
         // queryValue (of orderItem)
         itemvalue:{     
           type: String  
         },
-
-        // optional flag used for requeries 
-        trigger: 1,      
 
         // operator(relating queryItem and queryValue)
         operator: {      
@@ -77,9 +76,9 @@ as well for pull-queries as for push-queries(save)
       },
 
       observers: [
-        '_applyPathQuery(fb, path)',//, trigger)',
-        '_applyItemQuery(fb, path, item, itemvalue)',  // trigger)',
-        '_applyPathSave(fb, setdata, path, key)'       // 
+        '_applyPathQuery(fb, path, item)',
+        '_applyItemQuery(fb, path, item, itemvalue)', 
+        '_applyPathSave(fb, setdata, path, key)'       
       ],
 
       ready: function() { // console.log("firequery-ready");
@@ -87,9 +86,9 @@ as well for pull-queries as for push-queries(save)
       },
 
       /* */  
-      _applyPathQuery: function(fb, path, trigger) { 
+      _applyPathQuery: function(fb, path, item) { 
 
-        if (this.item=="_path_") {  // console.log("_applyPathQuery, path=", path, fb); 
+        if (!item || (item == "_all_")) {  // console.log("_applyPathQuery, path=", path, fb); 
 
           var that = this; // ALTMODISCH (use bind() instead?)
           fb.database().ref(path).once('value').then(function(snapshot) { 
@@ -101,6 +100,8 @@ as well for pull-queries as for push-queries(save)
 
       /* */
       _applyItemQuery: function(fb, path, item, value) {  //console.log("_applyItemQuery: ", "path="+path,"var="+ item,"val="+ value); 
+
+        if (!item || (item == "_all_")) return;  
 
         var ref  = fb.database().ref(path).orderByChild(item);
 
@@ -128,7 +129,7 @@ as well for pull-queries as for push-queries(save)
               that.data = snapshot.val();
             })
             .catch( function (errorObject) {
-              console.log("The read failed: " + errorObject.code);  
+              console.log("FBserver: The read failed with " + errorObject.code);  
             });
       },
 
