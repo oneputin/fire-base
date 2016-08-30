@@ -10,6 +10,9 @@
   <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
 
   <link rel="import" href="../../paper-tabs/paper-tabs.html">
+  <link rel="import" href="../../paper-item/paper-item.html">
+  <link rel="import" href="../../paper-listbox/paper-listbox.html">
+  <link rel="import" href="../../paper-dropdown-menu/paper-dropdown-menu.html">
   <link rel="import" href="../../iron-image/iron-image.html">
 
   <link rel="import" href="../fire-query.html">
@@ -44,21 +47,47 @@
         }
       </style>
 
-      <paper-tabs selected="{{tabindex}}">
-        <paper-tab>Heap</paper-tab>
-        <paper-tab>Sheet</paper-tab>
-        <paper-tab>Fleecy</paper-tab>
-      </paper-tabs>
+      <p>Select a classification item</p>
+      <paper-dropdown-menu label="Classification items">
+        <paper-listbox class="dropdown-content" attr-for-selected="value" selected="{{itemindex}}">
+          <paper-item value="type-character">character</paper-item>
+          <paper-item value="type-ice">icetype</paper-item>
+          <paper-item value="type-genus">genus</paper-item>
+          <paper-item value="type-photometeor">phototype</paper-item>
+        </paper-listbox>
+      </paper-dropdown-menu>
 
-      <fire-query app="wolke7" path="cplocal" item="type-character" itemvalue="[[itemvalue]]" data="{{data}}"></fire-query>
-
-      <p>Imagegroups of clouds with different form-character <a href="https://www.rmets.org/weather-and-climate/observing/luke-howard-and-cloud-names" target="_blank">(Howard/1802)</a>.</p>
+      <hr/>
       
+      <template is='dom-if' if="{{ischaractergroup(item)}}">
+
+        <p>Select a "type-character" value</p>
+        <paper-tabs selected="{{valueindex}}">
+          <paper-tab>Heap</paper-tab>
+          <paper-tab>Sheet</paper-tab>
+          <paper-tab>Fleecy</paper-tab>
+        </paper-tabs>
+
+        <fire-query app="wolke7" path="cplocal" item="[[item]]" itemvalue="[[itemvalue]]" data="{{data}}"></fire-query>
+
+        <p>Imagegroups of clouds with different form-character <a href="https://www.rmets.org/weather-and-climate/observing/luke-howard-and-cloud-names" target="_blank">(Howard/1802)</a>.</p>
+      
+      </template>
+
+      <template is='dom-if' if="{{!ischaractergroup(item)}}">
+        
+        <fire-query app="wolke7" path="cplocal" item="[[item]]" itemvalue="_all_" data="{{data}}"></fire-query>
+        
+        <p>Imagegroup of clouds classified by: [[item]] </p>
+
+      </template>    
+
       <template is='dom-repeat' items='{{imas}}' as='img'>
         <div>
           <span class="small">[[img.index]]</span>
           <span>[[img.title]]</span>
           <span class="pre">[[img.url]]</span>
+          <span >[[iteminfo(img)]]</span>
         </div>
       </template>
 
@@ -74,7 +103,7 @@
             
             fbapp : "",
 
-            tabindex : -1,  // = index of query-path-options
+            valueindex : -1,  // = index of query-path-options
 
             path:  {
               type: String
@@ -90,11 +119,19 @@
               observer: 'useValues'
             },
 
-            item: "", 
+            itemindex: {
+              type: String,
+              observer: 'getitem'
+            }, 
+
+            item: {
+              type: String
+            }, 
             
+            // special case type-character
             itemvalue: {
               type: String,
-              computed: 'calcValue(tabindex)'
+              computed: 'getCharacter(valueindex)'
             },
 
             data: {
@@ -113,32 +150,52 @@
           ], 
 
           ready: function(){
-            this.tabindex = 0;    // triggers view of FIRST Query-set
-            // this.item      = "type-character";
+            this.valueindex = 0;    // triggers view of FIRST Query-set
+            this.item     = "type-character";
             // this.itemvalue = 'none';
-            // this.item  = "type-year";
+            // this.item      = "type-year";
             // this.itemvalue = 2002;
           },
 
+          // presentation util
+          iteminfo: function(item) {
+            if (!item.item) return "";
+            var info = "|| " + item.item;
+            if (item.value) info = info+" : "+ item.value;
+            return info;
+          },
+
+          // 
+          getitem: function(n){ 
+            this.item = n;
+            this.itemvalue = "_all_";
+            this.valueindex = -1;
+          },
+
           useItems: function(n,o) { console.log("query items:", n);
-
           },
+
           useValues: function(n,o) {  console.log("query values:", n);
-
           },
 
-          calcValue: function(index) {
+          // 
+          getCharacter: function(index) { console.log("calValueLOG:", index);
             var items = {0:"heap",1:"sheet",2:"fleecy"};
                 value = items[index];
             return value;
           },
 
           // 
-          createSlides: function(data, olddata) { 
+          createSlides: function(data) { // , itemname, itemvalue) { 
             if (!data) return;
+            var itemname  = this.item; // as used for query !!
+
             if (!Array.isArray(data)) {
-              data =  Object.keys(data).map(function(k){return data[k]});
-            }  console.log("Howard: dataArray", data); 
+              data =  Object.keys(data)
+                      .map(function(k){
+                        return data[k]}
+                      );
+            } // console.log("cloudDataArray:", data); 
 
             // Prepare a standard-array (url, item) for "slide-show"
             var ima , title, index, nn = data.length, imas = [];
@@ -149,11 +206,22 @@
               ima = {
                 url: item.url,
                 title: title,
-                index: index
+                index: index,
+                item: itemname
               }
+              if (itemname) { // as used for FDB-query 
+                ima.item=itemname;
+                if (item[itemname]) ima.value=item[itemname]; // as queried from FDB
+              }  
+
               imas.push(ima)
-            }); console.log("slideArray-length=", imas.length);
+            }); console.log("cloudArray. length="+imas.length); // , imas);
             return imas; 
+          },
+
+          ischaractergroup: function(queryitem) {
+            if (queryitem=="type-character") return true;
+            return false; 
           }
 
         });

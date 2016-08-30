@@ -88,22 +88,26 @@ The actions are triggered by changes
       /* */  
       _applyPathQuery: function(fb, path, item) { 
 
-        if (!item || (item == "_all_")) {  // console.log("_applyPathQuery, path=", path, fb); 
+        if (!item || (item == "_all_")) {  console.log("_applyPathQuery, path=", path, item); 
 
-          var that = this; // ALTMODISCH (use bind() instead?)
+          // var that = this; // ALTMODISCH (use bind() instead?)
           fb.database().ref(path).once('value').then(function(snapshot) { 
-            // console.log("snapped pathmode", snapshot.val());
-            that.data = snapshot.val();
-          })
+            console.log("snapped pathmode", snapshot.val());
+            this.data = snapshot.val();
+          }.bind(this))
         }
       },
 
       /* */
-      _applyItemQuery: function(fb, path, item, value) {  //console.log("_applyItemQuery: ", "path="+path,"var="+ item,"val="+ value); 
+      _applyItemQuery: function(fb, path, item, value) {  
+
+        console.log("_applyItemQuery: ", "path="+path,"var="+ item,"val="+ value); 
 
         if (!item || (item == "_all_")) return;  
 
-        var ref  = fb.database().ref(path).orderByChild(item);
+        var ref  = fb.database()
+                     .ref(path)
+                     .orderByChild(item);
 
         if (value && (value != '_all_') ) {
           var op = this.operator;
@@ -112,25 +116,26 @@ The actions are triggered by changes
           } else { console.log("use of operator '"+op+"' not implemented!"); 
 
           } // console.log("_applyItemQuery prepared: ", ref); 
-        } 
+        } else {
+            ref = ref.startAt("a").endAt("z");
+        }
 
-        // OPTIONAL 
+        // OPTIONAL : return 'count' records(objects) only 
         var count = this.count; 
         if (count > 0) { 
-          ref = ref.limitToFirst(count)
-          console.log("apply count to ref: ",count, ref);
+          ref = ref.limitToFirst(count); console.log("query max. "+count+" documents only: ", ref);
         } 
 
         var that = this; // ALTMODISCH (use bind() instead?)
 
         // APPLY the query 
         ref.once('value')
-            .then(function(snapshot) {  // console.log("snapshot-value", snapshot.val());
+           .then(function(snapshot) {  // console.log("snapshot-value", snapshot.val());
               that.data = snapshot.val();
-            })
-            .catch( function (errorObject) {
+           })
+           .catch( function (errorObject) {
               console.log("FBserver: The read failed with " + errorObject.code);  
-            });
+           });
       },
 
       /* */ 
