@@ -23,9 +23,9 @@
 
 <body>
 
-  <div>Demo of <span style="font-family: courier;">fire-query</span></div>
+  <div>Demo of <span style="font-family: courier;">fire-query</span> - functionality</div>
 
-  <dom-module id="cloud-types">
+  <dom-module id="cloud-query">
 
     <template>
     
@@ -63,7 +63,7 @@
 
       <hr/>
       
-      <template is='dom-if' if="{{isQueried(item, 'character')}}">
+      <template is='dom-if' if="{{isQueryItem(item, 'character')}}">
 
         <p>Select a "type-character" value</p>
         <paper-tabs selected="{{valueindex}}">
@@ -73,44 +73,70 @@
           <paper-tab>f*</paper-tab>
         </paper-tabs>
 
-        <fire-query app="wolke7" path="cplocal" item="[[item]]" itemvalue="[[itemvalue]]" data="{{data}}"></fire-query>
+        <fire-query 
+          app="wolke7" 
+          path="cplocal" 
+          item="[[item]]" 
+          itemvalue="[[itemvalue]]" 
+          data="{{data}}">
+        </fire-query>
 
-        <p>[[querycount]] ImageMeta of clouds with value <b>[[itemvalue]]</b> of classification <b>form-character</b> <a href="https://www.rmets.org/weather-and-climate/observing/luke-howard-and-cloud-names" target="_blank">(Howard/1802)</a>.</p>
+        <p>[[querycount]] metaRecords of cloud-images with value <b>[[itemvalue]]</b> of <b>form-character</b>-classification  <a href="https://www.rmets.org/weather-and-climate/observing/luke-howard-and-cloud-names" target="_blank">(Howard/1802)</a>.</p>
       
       </template>
 
 
-      <template is='dom-if' if="{{isQueried(item, 'year')}}">
+      <template is='dom-if' if="{{isQueryItem(item, 'year')}}">
 
         <paper-input label="select a year" value="{{itemvalue}}"></paper-input>
 
-        <fire-query app="wolke7" path="cplocal" item="[[item]]" itemvalue="[[itemvalue]]" data="{{data}}"></fire-query>
+        <fire-query 
+          app="wolke7" 
+          path="cplocal" 
+          item="[[item]]" 
+          itemvalue="[[itemvalue]]" 
+          data="{{data}}">
+        </fire-query>
 
-        <p>[[querycount]] ImageMeta of clouds for year(s) <b>[[itemvalue]]</b>: Query numerical year-values</p>
+        <p>[[querycount]] metaRecords of cloud-images for year(s) <b>[[itemvalue]]</b>: Query numerical year-values</p>
       
       </template>
 
 
-      <template is='dom-if' if="{{isQueried(item, 'not,year,character')}}">
+      <template is='dom-if' if="{{isQueryItem(item, 'not,year,character')}}">
         
-        <fire-query app="wolke7" path="cplocal" item="[[item]]" itemvalue="_all_" data="{{data}}"></fire-query>
+        <fire-query 
+          app  ="wolke7" 
+          path ="cplocal" 
+          item ="[[item]]" 
+          itemvalue ="_all_" 
+          data ="{{data}}">
+        </fire-query>
         
-        <p>[[querycount]] CloudImageMeta queried by: <b>[[item]]</b> </p>
+        <p>[[querycount]] metaRecords of cloud-images described with property: <b>[[item]]</b> </p>
 
       </template>    
 
       
-      <!-- COMMON Result-block --> 
+      <!-- COMMON Output-block --> 
 
       <template is='dom-repeat' items='{{imas}}' as='img'>
+        
         <div>
           <span class="small">[[img.index]]</span>
           <span>[[img.title]]</span>
           <span class="pre">[[img.url]]</span>
           <span >[[iteminfo(img)]]</span>
         </div>
+
       </template>
 
+      <fire-query 
+        app      ="wolke7" 
+        path     ="cplocal" 
+        pathdata ="[[savedata]]">
+      </fire-query>  
+    
     </template>
 
     <script>
@@ -118,7 +144,7 @@
       window.addEventListener('WebComponentsReady', function() {
         Polymer({
 
-          is: 'cloud-types',
+          is: 'cloud-query',
           
           properties: {
             
@@ -162,12 +188,17 @@
 
             imas: {
               type: Object,
-              computed: 'createSlides(data)'
-            }
+              computed: 'importImas(data)'
+            },
+
+            savedata: {
+              type: Object,
+              computed: 'exportImas(imas)'
+            },
+
           },
 
           observers : [
-            // 'calcTarget(fbapp, path)'
           ], 
 
           ready: function(){
@@ -180,8 +211,8 @@
 
           // presentation util
           iteminfo: function(item) {
-            if (!item.item) return "";
-            var info = "|| " + item.item;
+            if (!item.name) return "";
+            var info = "|| " + item.name;
             if (item.value && (item.value.length < 20)) info = info+" : "+ item.value;
             return info;
           },
@@ -197,7 +228,7 @@
             this.item = n;
           },
 
-          useItems: function(n,o) { console.log("query items:", n);
+          useItems: function(n,o) {   console.log("query items:", n);
           },
 
           useValues: function(n,o) {  console.log("query values:", n);
@@ -214,41 +245,61 @@
           },
 
           // 
-          createSlides: function(data) { // , itemname, itemvalue) { 
+          importImas: function(data) { // , itemname, itemvalue) { 
             if (!data) return;
+
             var itemname  = this.item; // as used for query !!
 
             if (!Array.isArray(data)) {
-              data =  Object.keys(data)
-                      .map(function(k){
-                        return data[k]}
-                      );
-            } // console.log("cloudDataArray:", data); 
+              var keys = Object.keys(data), obj;
+              data  = keys.map(function(k){ 
+                obj = {};
+                obj.item  = data[k];        
+                obj.fbkey = k;
+                return obj;
+              }); 
+            }; console.log("cloudDataArray:", data); 
 
             // Prepare a standard-array (url, item) for "slide-show"
             var ima , title, index, nn = data.length, imas = [];
-            data.forEach(function(item,index){  // console.log(index, item);
+
+            data.forEach( function(ima,index){  // console.log(index, item);
+              
+              item  = ima.item; 
               index = "("+ (index+1) +"/" + nn +") ";
               title = item["title-main-pict"] ;
               if (item["title-sub-pict"]) title = title+" / "+item["title-sub-pict"] ;
-              ima = {
-                url: item.url,
-                title: title,
-                index: index,
-                item: itemname
-              }
+              
+              ima.url   = item.url;
+              ima.title = title;
+              ima.index = index;
+              
               if (itemname) { // as used for FDB-query 
-                ima.item=itemname;
+                ima.name = itemname;
                 if (item[itemname]) ima.value=item[itemname]; // as queried from FDB
               }  
-
               imas.push(ima)
             }); 
-            this.querycount = imas.length; console.log("cloudArray. length="+this.querycount); 
+            
+            this.querycount = imas.length; console.log("imageArray.length="+this.querycount); 
             return imas; 
           },
 
-          isQueried: function(queryitem, key) { // 
+          exportImas: function(imas) { 
+            var data, dataset = {}, d = new Date(); // console.log("exporting-1", d, imas) 
+            imas.forEach( function(ima,index){  // cons
+              data = ima.item;
+              data.log = d.getDate()  
+                        + "-" + (d.getMonth()+1) 
+                        + "-" + d.getFullYear() 
+                        + " " + d.getHours() 
+                        + ":" + d.getMinutes();
+              dataset[ima.fbkey] = data;
+            }); // console.log("exporting-2", dataset);
+            return dataset;
+          }, 
+          
+          isQueryItem: function(queryitem, key) { // 
             var keys = key.split(","),
                 key  = keys[0];
             if (queryitem.indexOf(key) >= 0) return true;
@@ -272,7 +323,7 @@
 
   </dom-module>
 
-  <cloud-types></cloud-types>
+  <cloud-query></cloud-query>
 
 </body>
 </html>

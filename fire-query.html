@@ -47,9 +47,10 @@ The actions are triggered by changes
           type: String
         },
 
-        key: {
+        // CTRL-param 
+        lastpath:{
           type: String
-        },  
+        },
 
         // query(order)Item
         item: {         
@@ -72,10 +73,19 @@ The actions are triggered by changes
           notify: true
         },
 
-        setdata: {
+        // Save one doc (keyvalue/keydata)
+        keyvalue: {
+          type: String
+        },  
+        keydata: {
           type: Object
         }, 
         
+        // Save multiple docs to same parentPath
+        pathdata: {
+          type: Object
+        },
+
         toast : {
           type: String,
           notify: true
@@ -85,10 +95,15 @@ The actions are triggered by changes
       observers: [
         'fbPathQuery(fb, path, item)',
         'fbItemQuery(fb, path, item, itemvalue)', 
-        'fbPathSave(fb, setdata, path, key)'       
+        'fbKeySave(fb, path, keyvalue, keydata)',
+        'fbPathSave(fb, path, pathdata)'
       ],
 
       ready: function() { // console.log("firequery-ready");
+      },
+
+      logKeydata: function(v) {
+        // console.log("log", v);
       },
 
       /* */  
@@ -181,34 +196,106 @@ The actions are triggered by changes
       },
 
       /* */ 
-      fbPathSave: function(fb, dbData, dbPath, dbKey) { 
+      fbKeySave: function(fb, parentPath, keyValue, keyData) { 
 
         // save the doc-reference to database
-        if (!Object.keys(dbData).length) { console.log("Missing data to submit")
+        if ((typeof keyData == Object) && !Object.keys(keyData).length) { 
+          console.log("Empty dataObject to submit into ", parentPath, keyValue)
           return; 
-        } //console.log("triggered to save at path:", dbPath, dbData);
-        
+        } // console.log("triggered to save at FB:", parentPath, keyValue, keyData);
+        // return; 
+        // debugger; 
+
         // 1. 
-        if (!fb.database().ref().child(dbPath)) { // target-path-node must exist to enable key-generator
-          fb.database().ref(dbPath).set([]);
+        if (!fb.database().ref().child(parentPath)) { // target-path-node must exist to enable key-generator
+          fb.database().ref(parentPath).set([]);
         }  
 
-        // 2. Get unique key for the dataObject at the target path
-        if (!dbKey) dbKey = fb.database().ref().child(dbPath).push().key;   // console.log("dbDataSubmit", dbKey, dbData); // return;
+        // 2. Get unique key for the dataObject at the target path ??? 
+        if (!keyValue) keyValue = fb.database().ref().child(parentPath).push().key;   // console.log("keyDataSubmit", keyValue, keyData); // return;
+
+        var targetPath = parentPath+'/'+keyValue;
 
         //  3. Store&check the dataObject
         //  3.1 STORE
-        fb.database().ref(dbPath+'/'+dbKey).set(dbData);  // console.log("save at:", dbPath+'/'+dbKey);
+        fb.database().ref(targetPath).set(keyData);  console.log("saved at:", targetPath);
         
-        //  3.2 CHECK
-        var that = this;
-        fb.database().ref(dbPath+'/'+dbKey).once('value').then(function(snapshot) { // console.log("data saved with key "+dbKey, snapshot.val());
-            that.lastpath = dbPath+'/'+dbKey; 
-        })
+        //  3.2 CHECK-Option
+        if (1) {
+          var log;
+          fb.database().ref(targetPath)
+                       .once('value')
+                       .then(function(snapshot) { 
+                          log = snapshot.val().log;  console.log("data were saved in: "+targetPath, ", log: "+log); // , snapshot.val());
+                          this.lastpath = targetPath; 
+                        }.bind(this));
+        }
 
-        // 3.3 reset the key !! to avoid save with altered data !!
+        // 4. RESET  to avoid save when only one of the pair is altered !!
         
-        this.key = undefined; 
+        this.keyvalue = undefined; 
+        this.keydata  = undefined; 
+      },  
+
+
+      fbSave : function(key, data) { // create a promise to save a data(doc) at key 
+        // Return a new promise.
+        return new Promise(function(resolve, reject) {
+          // Do the usual XHR stuff
+          var req = new XMLHttpRequest();
+          req.open('GET', url);
+
+          req.onload = function() {
+            // This is called even on 404 etc
+            // so check the status
+            if (req.status == 200) {
+              // Resolve the promise with the response text
+              resolve(req.response);
+            }
+            else {
+              // Otherwise reject with the status text
+              // which will hopefully be a meaningful error
+              reject(Error(req.statusText));
+            }
+          };
+
+          // Handle network errors
+          req.onerror = function() {
+            reject(Error("Network Error"));
+          };
+
+          // Make the request
+          req.send();
+        });
+      },
+
+      /* use a promiseChain to */ 
+      fbPathSave: function(fb, parentPath, pathData) {
+        // save the doc-reference to database
+        if ((typeof pathData == Object) && !Object.keys(pathData).length) { 
+          console.log("Empty dataObject to submit into ", parentPath)
+          return; 
+        } console.log("triggered to save at FB:", parentPath, pathData);
+        return; 
+        // debugger; 
+
+        // 1. 
+        if (!fb.database().ref().child(parentPath)) { // target-path-node must exist to enable key-generator
+          fb.database().ref(parentPath).set([]);
+        }  
+
+        // 2. 
+        // getpathData(pathData).then(function(result){
+        //   return Promise.all(result.keys.map(function (data) { 
+        //     return fbSave(key, data);
+        // }))
+        // .then(function(allSaved) {
+        //   return xxx;
+        // })  
+        // .catch(console.log("error-catch"))
+
+
+        this.pathdata = undefined;
       }  
 
     });

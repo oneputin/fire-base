@@ -33,5 +33,8 @@ Return documents which have exact the queried value of a given property (item)
 ## range queries
 are built using startAt()- endAt()-filters. 
   
+# fbPathSave - details
+requires all components (path, key, content) to be synced before Save
 
+## 
 
