@@ -48,6 +48,7 @@
       </style>
 
       <p>Select a classification item</p>
+
       <paper-dropdown-menu label="Classification items">
         <paper-listbox class="dropdown-content" attr-for-selected="value" selected="{{itemindex}}">
           <paper-item value="type-character">character</paper-item>
@@ -59,7 +60,7 @@
 
       <hr/>
       
-      <template is='dom-if' if="{{ischaractergroup(item)}}">
+      <template is='dom-if' if="{{isCharacterQueried(item)}}">
 
         <p>Select a "type-character" value</p>
         <paper-tabs selected="{{valueindex}}">
@@ -70,15 +71,15 @@
 
         <fire-query app="wolke7" path="cplocal" item="[[item]]" itemvalue="[[itemvalue]]" data="{{data}}"></fire-query>
 
-        <p>Imagegroups of clouds with different form-character <a href="https://www.rmets.org/weather-and-climate/observing/luke-howard-and-cloud-names" target="_blank">(Howard/1802)</a>.</p>
+        <p>ImageMeta of clouds with value <b>[[itemvalue]]</b> of classification <b>form-character</b> <a href="https://www.rmets.org/weather-and-climate/observing/luke-howard-and-cloud-names" target="_blank">(Howard/1802)</a>.</p>
       
       </template>
 
-      <template is='dom-if' if="{{!ischaractergroup(item)}}">
+      <template is='dom-if' if="{{!isCharacterQueried(item)}}">
         
         <fire-query app="wolke7" path="cplocal" item="[[item]]" itemvalue="_all_" data="{{data}}"></fire-query>
         
-        <p>Imagegroup of clouds classified by: [[item]] </p>
+        <p>ImageMeta of clouds classified by: <b>[[item]]</b> </p>
 
       </template>    
 
@@ -94,6 +95,7 @@
     </template>
 
     <script>
+    
       window.addEventListener('WebComponentsReady', function() {
         Polymer({
 
@@ -219,7 +221,7 @@
             return imas; 
           },
 
-          ischaractergroup: function(queryitem) {
+          isCharacterQueried: function(queryitem) {
             if (queryitem=="type-character") return true;
             return false; 
           }

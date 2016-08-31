@@ -28,11 +28,17 @@ The actions are triggered by changes
     Polymer({
       is: 'fire-query',
       properties: {
-
+        /**
+         * Key of requested firebase-app
+         * @type {String}
+         */
         app: {  
           type: String
         },
-
+        /**
+         * Firebase app
+         * @type {Object}
+         */
         fb: {
           type: Object
         },
@@ -76,19 +82,18 @@ The actions are triggered by changes
       },
 
       observers: [
-        '_applyPathQuery(fb, path, item)',
-        '_applyItemQuery(fb, path, item, itemvalue)', 
-        '_applyPathSave(fb, setdata, path, key)'       
+        'fbPathQuery(fb, path, item)',
+        'fbItemQuery(fb, path, item, itemvalue)', 
+        'fbPathSave(fb, setdata, path, key)'       
       ],
 
       ready: function() { // console.log("firequery-ready");
-
       },
 
       /* */  
-      _applyPathQuery: function(fb, path, item) { 
+      fbPathQuery: function(fb, path, item) { 
 
-        if (!item || (item == "_all_")) {  console.log("_applyPathQuery, path=", path, item); 
+        if (!item || (item == "_all_")) {  console.log("fbPathQuery, path=", path, item); 
 
           // var that = this; // ALTMODISCH (use bind() instead?)
           fb.database().ref(path).once('value').then(function(snapshot) { 
@@ -99,9 +104,9 @@ The actions are triggered by changes
       },
 
       /* */
-      _applyItemQuery: function(fb, path, item, value) {  
+      fbItemQuery: function(fb, path, item, value) {  
 
-        console.log("_applyItemQuery: ", "path="+path,"var="+ item,"val="+ value); 
+        console.log("fbItemQuery: ", "path="+path,"var="+ item,"val="+ value); 
 
         if (!item || (item == "_all_")) return;  
 
@@ -115,9 +120,13 @@ The actions are triggered by changes
             ref = ref.equalTo(value);
           } else { console.log("use of operator '"+op+"' not implemented!"); 
 
-          } // console.log("_applyItemQuery prepared: ", ref); 
-        } else {
-            ref = ref.startAt("a").endAt("z");
+          } // console.log("fbItemQuery prepared: ", ref); 
+
+        } else { // DEFAULT QUERY if no specific value queried 
+            ref = ref.startAt("0").endAt("z");     // numeric + string values
+            // ref = ref.startAt("A").endAt("z");  // all string values  
+            // ref = ref.startAt("a").endAt("z");  // lowercase string values only  
+            // ref = ref.startAt("A").endAt("Z");  // uppercase string values only  
         }
 
         // OPTIONAL : return 'count' records(objects) only 
@@ -139,7 +148,7 @@ The actions are triggered by changes
       },
 
       /* */ 
-      _applyPathSave: function(fb, dbData, dbPath, dbKey) { 
+      fbPathSave: function(fb, dbData, dbPath, dbKey) { 
 
         // save the doc-reference to database
         if (!Object.keys(dbData).length) { console.log("Missing data to submit")
