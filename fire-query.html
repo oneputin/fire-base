@@ -58,7 +58,8 @@ The actions are triggered by changes
         
         // queryValue (of orderItem)
         itemvalue:{     
-          type: String  
+          type: String,
+          value: "_all_"  
         },
 
         // operator(relating queryItem and queryValue)
@@ -106,25 +107,57 @@ The actions are triggered by changes
       /* */
       fbItemQuery: function(fb, path, item, value) {  
 
-        console.log("fbItemQuery: ", "path="+path,"var="+ item,"val="+ value); 
-
         if (!item || (item == "_all_")) return;  
 
-        var ref  = fb.database()
-                     .ref(path)
-                     .orderByChild(item);
+        var op  = this.operator, // optional operator 
+            ops = ["<", ">", "!"];
 
-        if (value && (value != '_all_') ) {
-          var op = this.operator;
-          if (!op) {
-            ref = ref.equalTo(value);
-          } else { console.log("use of operator '"+op+"' not implemented!"); 
+        var ref = fb.database()
+                    .ref(path);
+
+        if (item.indexOf("*") >= 0) { // console.log("check existence of multiple "wildcarded" properties"); 
+
+
+
+        } else if (value && (value != '_all_') ) {
+
+          ref = ref.orderByChild(item);
+          
+          var wildcardpos = value.indexOf("*"); // 
+         
+          if (ops.indexOf(value.substring(0,1)) >= 0) {
+            op    = value.substring(0,1);
+            value = value.substring(1); 
+          }   
+
+          if (wildcardpos > 0) { 
+
+            var wildcard = value.substring(0, wildcardpos);   console.log("wildcardQuery: ", "path="+path, "var="+ item, "wild=" + wildcard); 
+
+            ref = ref.startAt(wildcard).endAt(wildcard+"\uf8ff");
+
+          } else {
+
+            var vnum = parseFloat(value);  
+            if (!isNaN(vnum)) value = vnum;
+            
+            if (!op) {            console.log("strictValueQuery: ", "path="+path, "var="+ item, "val=" + value); 
+                ref = ref.equalTo(value);
+              // if (isNaN(vnum)) ref = ref.equalTo(value);
+              // else             ref = ref.equalTo(vnum);
+            } else if (op=="<") {  console.log("rangeQuery < : ", "path="+path, "var="+ item, "val=" + value); 
+                ref = ref.startAt(0).endAt(value);
+            } else if (op==">") {  console.log("rangeQuery > : ", "path="+path, "var="+ item, "val=" + value); 
+                ref = ref.startAt(value);
+            }   
 
           } // console.log("fbItemQuery prepared: ", ref); 
 
         } else { // DEFAULT QUERY if no specific value queried 
-            ref = ref.startAt("0").endAt("z");     // numeric + string values
-            // ref = ref.startAt("A").endAt("z");  // all string values  
+
+            ref = ref.orderByChild(item);
+            ref = ref.startAt(0).endAt("z");    // numeric + string values
+            // ref = ref.startAt("A").endAt("z");     // all string values  
             // ref = ref.startAt("a").endAt("z");  // lowercase string values only  
             // ref = ref.startAt("A").endAt("Z");  // uppercase string values only  
         }

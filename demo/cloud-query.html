@@ -47,41 +47,60 @@
         }
       </style>
 
-      <p>Select a classification item</p>
+      <p>Selecting CloudImgMeta by Firebase queries</p>
 
-      <paper-dropdown-menu label="Classification items">
+      <paper-dropdown-menu label="Query properties">
         <paper-listbox class="dropdown-content" attr-for-selected="value" selected="{{itemindex}}">
+          <paper-item value="type-year">year</paper-item>
           <paper-item value="type-character">character</paper-item>
           <paper-item value="type-ice">icetype</paper-item>
           <paper-item value="type-genus">genus</paper-item>
           <paper-item value="type-photometeor">phototype</paper-item>
+          <paper-item value="placeholder">placeholder</paper-item>
+          <paper-item value="type-*">any type-classification</paper-item>
         </paper-listbox>
       </paper-dropdown-menu>
 
       <hr/>
       
-      <template is='dom-if' if="{{isCharacterQueried(item)}}">
+      <template is='dom-if' if="{{isQueried(item, 'character')}}">
 
         <p>Select a "type-character" value</p>
         <paper-tabs selected="{{valueindex}}">
           <paper-tab>Heap</paper-tab>
           <paper-tab>Sheet</paper-tab>
           <paper-tab>Fleecy</paper-tab>
+          <paper-tab>f*</paper-tab>
         </paper-tabs>
 
         <fire-query app="wolke7" path="cplocal" item="[[item]]" itemvalue="[[itemvalue]]" data="{{data}}"></fire-query>
 
-        <p>ImageMeta of clouds with value <b>[[itemvalue]]</b> of classification <b>form-character</b> <a href="https://www.rmets.org/weather-and-climate/observing/luke-howard-and-cloud-names" target="_blank">(Howard/1802)</a>.</p>
+        <p>[[querycount]] ImageMeta of clouds with value <b>[[itemvalue]]</b> of classification <b>form-character</b> <a href="https://www.rmets.org/weather-and-climate/observing/luke-howard-and-cloud-names" target="_blank">(Howard/1802)</a>.</p>
       
       </template>
 
-      <template is='dom-if' if="{{!isCharacterQueried(item)}}">
+
+      <template is='dom-if' if="{{isQueried(item, 'year')}}">
+
+        <paper-input label="select a year" value="{{itemvalue}}"></paper-input>
+
+        <fire-query app="wolke7" path="cplocal" item="[[item]]" itemvalue="[[itemvalue]]" data="{{data}}"></fire-query>
+
+        <p>[[querycount]] ImageMeta of clouds for year(s) <b>[[itemvalue]]</b>: Query numerical year-values</p>
+      
+      </template>
+
+
+      <template is='dom-if' if="{{isQueried(item, 'not,year,character')}}">
         
         <fire-query app="wolke7" path="cplocal" item="[[item]]" itemvalue="_all_" data="{{data}}"></fire-query>
         
-        <p>ImageMeta of clouds classified by: <b>[[item]]</b> </p>
+        <p>[[querycount]] CloudImageMeta queried by: <b>[[item]]</b> </p>
 
       </template>    
+
+      
+      <!-- COMMON Result-block --> 
 
       <template is='dom-repeat' items='{{imas}}' as='img'>
         <div>
@@ -133,7 +152,7 @@
             // special case type-character
             itemvalue: {
               type: String,
-              computed: 'getCharacter(valueindex)'
+              computed: 'getValue(valueindex)'
             },
 
             data: {
@@ -153,7 +172,7 @@
 
           ready: function(){
             this.valueindex = 0;    // triggers view of FIRST Query-set
-            this.item     = "type-character";
+            this.item       = "type-character";
             // this.itemvalue = 'none';
             // this.item      = "type-year";
             // this.itemvalue = 2002;
@@ -163,15 +182,19 @@
           iteminfo: function(item) {
             if (!item.item) return "";
             var info = "|| " + item.item;
-            if (item.value) info = info+" : "+ item.value;
+            if (item.value && (item.value.length < 20)) info = info+" : "+ item.value;
             return info;
           },
 
-          // 
+          /**
+           * Change queryItem
+           * @param  {String} n Name of query-property
+          */
           getitem: function(n){ 
-            this.item = n;
             this.itemvalue = "_all_";
             this.valueindex = -1;
+            this.querycount = "";
+            this.item = n;
           },
 
           useItems: function(n,o) { console.log("query items:", n);
@@ -181,9 +204,12 @@
           },
 
           // 
-          getCharacter: function(index) { console.log("calValueLOG:", index);
-            var items = {0:"heap",1:"sheet",2:"fleecy"};
-                value = items[index];
+          getValue: function(index) { console.log("calValueLOG:", index, this.item);
+            var value = "_all_"; 
+            if (this.item == "type-character") {
+              var items = {0:"heap", 1:"sheet", 2:"fleecy", 3:"f*"};
+              value = items[index];
+            } 
             return value;
           },
 
@@ -217,12 +243,26 @@
               }  
 
               imas.push(ima)
-            }); console.log("cloudArray. length="+imas.length); // , imas);
+            }); 
+            this.querycount = imas.length; console.log("cloudArray. length="+this.querycount); 
             return imas; 
           },
 
-          isCharacterQueried: function(queryitem) {
-            if (queryitem=="type-character") return true;
+          isQueried: function(queryitem, key) { // 
+            var keys = key.split(","),
+                key  = keys[0];
+            if (queryitem.indexOf(key) >= 0) return true;
+
+            if (key == "not") {
+              var flag=true; 
+              keys.every(function(k){
+                if (queryitem.indexOf(k) >= 0) {
+                  flag = false;
+                  return false;
+                }  
+              })
+              return flag; 
+            } 
             return false; 
           }
 
