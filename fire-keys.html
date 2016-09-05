@@ -2,7 +2,7 @@
 <link rel="import" href="fire-query.html">
 
 <!--
-`fire-keys` returns the keys of queried firebase-data.  
+`fire-keys` returns all obj-keys contained in queried firebase-objects.  
 
 @element fire-keys
 @demo demo/index.html
@@ -81,13 +81,14 @@
 
       filterKeys: function(data, olddata) { 
         if (!data) return;
+
         if (!Array.isArray(data)) {
           data =  Object.keys(data).map(function(k){return data[k]});
         } // console.log(data);
 
         // Collect all keys used in data-objects(items)
         var keys=[], itemkeys, nn=data.length;
-        data.forEach(function(item,index){  // console.log(index, item);
+        data.forEach(function(item, index){  // console.log(index, item);
           itemkeys = Object.keys(item);
           keys = keys.concat(itemkeys).filter(function(v,i,self){
               return self.indexOf(v) === i;
@@ -96,7 +97,7 @@
         
         if (keys.length && this.filter) { 
           var  fkeys=[], filter = this.filter; // console.log("filter", filter);
-          keys.forEach(function(item,index){  
+          keys.forEach(function(item, index){  
             var n = item.indexOf(filter); // console.log(index, item, n);
             if ( n < 0) return; // console.log(index, item, n);
             fkeys.push(item); 

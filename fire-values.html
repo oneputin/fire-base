@@ -3,7 +3,7 @@
 <link rel="import" href="fire-query.html">
 
 <!--
-`fire-values` is an element that queries firebase-data.  
+`fire-values` returns all different values assigned to the same key in firebase-objects returned by <fire-query>.  
 
 @element fire-values
 @demo demo/index.html
@@ -33,11 +33,11 @@
       is: 'fire-values',
       
       properties: {
-        // firebase-app
+        // key of firebase-app
         app:  {
           type: String
         },
-        // path to query
+        // path to query-objects
         path:  {
           type: String
         },
@@ -82,9 +82,9 @@
           data =  Object.keys(data).map(function(k){return data[k]});
         } // console.log(data);
 
-        // Collect all values used in data-objects (z.B. img-metadata)
+        // A. Collect all values used in (any) data-objects (z.B. img-metadata)
         var queryname = this.item, 
-            values=[], 
+            values = [], 
             nn=data.length;
 
         data.forEach(function(item,index){  // console.log(index, item);
@@ -93,9 +93,11 @@
           values = values.concat(item[queryname]).filter(function(v,i,self){
               return self.indexOf(v) === i;
           });
+
         }); // console.log("values(n="+values.length+")", values);
         if (!values.length) return values;
 
+        // B. Apply a filter 
         if (this.filter) { 
           var  arr=[], filter = this.filter; console.log("filter", filter);
           values.forEach(function(item,index){  

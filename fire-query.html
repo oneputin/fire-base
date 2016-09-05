@@ -27,11 +27,12 @@ The actions are triggered by changes
 
     Polymer({
       is: 'fire-query',
+
       properties: {
         /**
          * Key of requested firebase-app
          * @type {String}
-         */
+        */
         app: {  
           type: String
         },
@@ -52,12 +53,13 @@ The actions are triggered by changes
           type: String
         },
 
-        // query(order)Item
+        // filter(order)Item
         item: {         
-          type: String   
+          type: String,   
+          value: "_all_"  
         },
         
-        // queryValue (of orderItem)
+        // filterValue (of orderItem)
         itemvalue:{     
           type: String,
           value: "_all_"  
@@ -70,6 +72,7 @@ The actions are triggered by changes
 
         data: {
           type: Object,
+          // computed: 'fbQuery(fb, path, item, itemvalue)',
           notify: true
         },
 
@@ -77,14 +80,25 @@ The actions are triggered by changes
         keyvalue: {
           type: String
         },  
+
         keydata: {
           type: Object
         }, 
         
         // Save multiple docs to same parentPath
-        pathdata: {
+        savedata: {
           type: Object
         },
+
+        /**
+         * ctrl decides mode of db-update, see fbSave
+         */
+        savectrl: true,  
+
+        saveflag: {
+          value:false,
+          notify: true
+        },  
 
         toast : {
           type: String,
@@ -93,10 +107,8 @@ The actions are triggered by changes
       },
 
       observers: [
-        'fbPathQuery(fb, path, item)',
-        'fbItemQuery(fb, path, item, itemvalue)', 
-        'fbKeySave(fb, path, keyvalue, keydata)',
-        'fbPathSave(fb, path, pathdata)'
+        'fbQuery(fb, path, item, itemvalue)',
+        'fbSave(fb, path, savedata, savectrl)'
       ],
 
       ready: function() { // console.log("firequery-ready");
@@ -106,24 +118,30 @@ The actions are triggered by changes
         // console.log("log", v);
       },
 
-      /* */  
-      fbPathQuery: function(fb, path, item) { 
+      /**
+       * Query content from fb database
+       * @param  {[type]} fb     [description]
+       * @param  {[type]} path   [description]
+       * @param  {[type]} item   [description]
+       * @param  {[type]} value) {             console.log(path, item, value [description]
+       * @return {[type]}        [description]
+       */
+      fbQuery: function(fb, path, item, value) {  console.log("Start fbQuery:", path, item, value);
 
-        if (!item || (item == "_all_")) {  console.log("fbPathQuery, path=", path, item); 
+        if (item == "_all_") {
 
-          // var that = this; // ALTMODISCH (use bind() instead?)
-          fb.database().ref(path).once('value').then(function(snapshot) { 
-            console.log("snapped pathmode", snapshot.val());
-            this.data = snapshot.val();
-          }.bind(this))
+          fb.database().ref(path).once('value').then(
+            function(snapshot) { 
+              console.log("snapped pathmode", snapshot.val());
+              return snapshot.val();
+            },
+            function(error) {
+              console.log("fbQueryNode", error);
+              return; 
+            })
         }
-      },
 
-      /* */
-      fbItemQuery: function(fb, path, item, value) {  
-
-        if (!item || (item == "_all_")) return;  
-
+        // 2.1 BUILD the fbQuery 
         var op  = this.operator, // optional operator 
             ops = ["<", ">", "!"];
 
@@ -133,44 +151,56 @@ The actions are triggered by changes
         if (item.indexOf("*") >= 0) { // console.log("check existence of multiple "wildcarded" properties"); 
 
 
-
         } else if (value && (value != '_all_') ) {
 
           ref = ref.orderByChild(item);
           
-          var wildcardpos = value.indexOf("*"); // 
+          var wildcard, numvalue,
+          		wildStarPos = value.indexOf("*"),
+          		wildHashPos = value.indexOf("#"); // 
          
           if (ops.indexOf(value.substring(0,1)) >= 0) {
             op    = value.substring(0,1);
             value = value.substring(1); 
           }   
 
-          if (wildcardpos > 0) { 
+          if (wildStarPos > 0) { 
 
-            var wildcard = value.substring(0, wildcardpos);   console.log("wildcardQuery: ", "path="+path, "var="+ item, "wild=" + wildcard); 
-
+            wildcard = value.substring(0, wildStarPos);   console.log("wildcardStar Query: ", "path="+path, "var="+ item, "wild=" + wildcard); 
             ref = ref.startAt(wildcard).endAt(wildcard+"\uf8ff");
 
-          } else {
+          } else if (wildHashPos > 0) {
+          	var von = value.replace(/#/g, "0"),
+          			bis = value.replace(/#/g, "9");
 
-            var vnum = parseFloat(value);  
-            if (!isNaN(vnum)) value = vnum;
+            wildcard = value.substring(0, wildHashPos);   console.log("wildcardHash Query: ", "path="+path, "var="+ item, "von="+von, "bis="+bis); 
+           	ref = ref.startAt(parseFloat(von)).endAt(parseFloat(bis));
+
+          } else {	// DEFAULT
+
+            numvalue = parseFloat(value);  
+            if (!isNaN(numvalue)) value = numvalue;
             
-            if (!op) {            console.log("strictValueQuery: ", "path="+path, "var="+ item, "val=" + value); 
+            if (!op) {             console.log("strictValueQuery: ", "path="+path, "var="+ item, "val=" + value); 
+              
                 ref = ref.equalTo(value);
-              // if (isNaN(vnum)) ref = ref.equalTo(value);
-              // else             ref = ref.equalTo(vnum);
+              // if (isNaN(numvalue)) ref = ref.equalTo(value);
+              // else             ref = ref.equalTo(numvalue);
+
             } else if (op=="<") {  console.log("rangeQuery < : ", "path="+path, "var="+ item, "val=" + value); 
+               
                 ref = ref.startAt(0).endAt(value);
+
             } else if (op==">") {  console.log("rangeQuery > : ", "path="+path, "var="+ item, "val=" + value); 
+               
                 ref = ref.startAt(value);
             }   
 
-          } // console.log("fbItemQuery prepared: ", ref); 
+          } // console.log("fbQuery prepared: ", ref); 
 
         } else { // DEFAULT QUERY if no specific value queried 
 
-            ref = ref.orderByChild(item);
+            ref = ref.orderByChild(item); 
             ref = ref.startAt(0).endAt("z");    // numeric + string values
             // ref = ref.startAt("A").endAt("z");     // all string values  
             // ref = ref.startAt("a").endAt("z");  // lowercase string values only  
@@ -183,120 +213,172 @@ The actions are triggered by changes
           ref = ref.limitToFirst(count); console.log("query max. "+count+" documents only: ", ref);
         } 
 
-        var that = this; // ALTMODISCH (use bind() instead?)
-
-        // APPLY the query 
+        // 2.2 APPLY the fbQuery and return results 
+        //     Does not work with "return" to a 'computed property'
+        var that = this;
         ref.once('value')
-           .then(function(snapshot) {  // console.log("snapshot-value", snapshot.val());
+        // return ref.once('value')
+           .then(function(snapshot) {  console.log("snapshot.val()=", snapshot.val());
               that.data = snapshot.val();
+              // return snapshot.val();
            })
            .catch( function (errorObject) {
-              console.log("FBserver: The read failed with " + errorObject.code);  
+              console.log("FB-query failed with " + errorObject.code);  
+              return;
            });
       },
 
-      /* */ 
-      fbKeySave: function(fb, parentPath, keyValue, keyData) { 
-
+      /**
+       * Insert/replace a set of objects/documents into common parentPath
+       * @param  {string} fb         [description]
+       * @param  {string} parentPath [description]
+       * @param  {object} savedata   collection of path/document pairs 
+       * @param  {any}    ctrl       controls type of save operation  
+       * @return {Boolean}           successflag 
+       */
+      fbSave: function(fb, parentPath, savedata, ctrl) { console.log("fbSave STARTING", ctrl, typeof savedata);  
         // save the doc-reference to database
-        if ((typeof keyData == Object) && !Object.keys(keyData).length) { 
-          console.log("Empty dataObject to submit into ", parentPath, keyValue)
-          return; 
-        } // console.log("triggered to save at FB:", parentPath, keyValue, keyData);
-        // return; 
-        // debugger; 
-
-        // 1. 
-        if (!fb.database().ref().child(parentPath)) { // target-path-node must exist to enable key-generator
-          fb.database().ref(parentPath).set([]);
-        }  
-
-        // 2. Get unique key for the dataObject at the target path ??? 
-        if (!keyValue) keyValue = fb.database().ref().child(parentPath).push().key;   // console.log("keyDataSubmit", keyValue, keyData); // return;
-
-        var targetPath = parentPath+'/'+keyValue;
-
-        //  3. Store&check the dataObject
-        //  3.1 STORE
-        fb.database().ref(targetPath).set(keyData);  console.log("saved at:", targetPath);
-        
-        //  3.2 CHECK-Option
-        if (1) {
-          var log;
-          fb.database().ref(targetPath)
-                       .once('value')
-                       .then(function(snapshot) { 
-                          log = snapshot.val().log;  console.log("data were saved in: "+targetPath, ", log: "+log); // , snapshot.val());
-                          this.lastpath = targetPath; 
-                        }.bind(this));
-        }
-
-        // 4. RESET  to avoid save when only one of the pair is altered !!
-        
-        this.keyvalue = undefined; 
-        this.keydata  = undefined; 
-      },  
-
-
-      fbSave : function(key, data) { // create a promise to save a data(doc) at key 
-        // Return a new promise.
-        return new Promise(function(resolve, reject) {
-          // Do the usual XHR stuff
-          var req = new XMLHttpRequest();
-          req.open('GET', url);
-
-          req.onload = function() {
-            // This is called even on 404 etc
-            // so check the status
-            if (req.status == 200) {
-              // Resolve the promise with the response text
-              resolve(req.response);
-            }
-            else {
-              // Otherwise reject with the status text
-              // which will hopefully be a meaningful error
-              reject(Error(req.statusText));
-            }
-          };
-
-          // Handle network errors
-          req.onerror = function() {
-            reject(Error("Network Error"));
-          };
-
-          // Make the request
-          req.send();
-        });
-      },
-
-      /* use a promiseChain to */ 
-      fbPathSave: function(fb, parentPath, pathData) {
-        // save the doc-reference to database
-        if ((typeof pathData == Object) && !Object.keys(pathData).length) { 
+        if ((typeof savedata != "object") || (Object.keys(savedata).length==0)) { 
           console.log("Empty dataObject to submit into ", parentPath)
           return; 
-        } console.log("triggered to save at FB:", parentPath, pathData);
-        return; 
+        } console.log("trigger to save at FB:", parentPath, Object.keys(savedata), ctrl); // return; 
         // debugger; 
 
-        // 1. 
-        if (!fb.database().ref().child(parentPath)) { // target-path-node must exist to enable key-generator
+        // 1. target-path-node must exist 
+        //    to enable childs key-generator
+        if (!fb.database().ref().child(parentPath)) { 
           fb.database().ref(parentPath).set([]);
         }  
 
-        // 2. 
-        // getpathData(pathData).then(function(result){
-        //   return Promise.all(result.keys.map(function (data) { 
-        //     return fbSave(key, data);
-        // }))
-        // .then(function(allSaved) {
-        //   return xxx;
-        // })  
-        // .catch(console.log("error-catch"))
+        // 2. update fb with savedata at parentPath 
+        var replaceflag; 
+        var that = this;
 
+        //  2.1  replace complete node-content
+        if (ctrl=="_replace_") {  
+          fb.database().ref(parentPath)
+             .set(savedata)
+             .then(function(){
+                console.log("node-replace done!", savedata)
+                that.saveflag = true; 
+             })
+             .catch(function(){
+                console.log("err-node-replace"); 
+             }); 
+          return;    
+        }      
 
-        this.pathdata = undefined;
+        // 2.2 update docs existing in parent ref 
+        //   = map savedata to array of fbSave-promises
+
+        var updateDocs = function(ref, data) {
+          
+          var updateDoc = function(k) {
+            var prom = ref.child(k).set(data[k]);
+            return prom; 
+          }; 
+
+          return Object.keys(data).map(updateDoc);
+        };  
+
+        var updateItems = function(ref, data, item) {
+          var updateItem = function(k) {
+            var refdoc = ref.child(k); 
+            var prom = refdoc.child(item).set(data[k][item]);
+            return prom; 
+          }; 
+          return Object.keys(data).map(updateItem);  
+        };
+
+        var ref = fb.database().ref(parentPath);
+        
+        var allP=[];   
+
+        Promise.resolve(savedata)
+        
+          .then(function(data){
+            // Create an array of  
+            console.log("ctrl=", ctrl); 
+            if (ctrl == "_doc_") {
+
+              allP = updateDocs(ref, data);            console.log("Replace COMPLETE update-documents"); 
+
+            } else if (Array.isArray(ctrl)) {   console.log("Replace MULTIPLE properties of update-documents"); 
+
+              ctrl.forEach(function(item){ 
+
+                allP = allP.concat(updateItems(ref, data, item));  
+
+              })
+
+            } else if (typeof ctrl == "string") { console.log("Replace ONE property of update-documents"); 
+
+              allP = updateItems(ref, data, ctrl); // Object.keys(data).map(updateItem);  
+
+            } else {                            console.log("Replace COMPLETE update-documents"); 
+
+              allP = updateDocs(ref, data);   
+
+            } console.log(allP.length + " Promises", allP );
+          
+            return Promise.all(allP);           // !!!
+            //***********************
+          })
+          .then (function(values){
+            console.log("promises done: " + values.length, values)
+            that.saveflag = true; 
+            this.savedata = undefined;
+          })
+          .catch(function() {
+            console.log("err-childs-update");
+            that.saveflag = false; 
+            this.savedata = undefined;
+          }); 
+
       }  
+
+      /* OLD */ 
+      // fbSaveKey: function(fb, parentPath, keyValue, keyData) { 
+
+      //   // save the doc-reference to database
+      //   if ((typeof keyData == Object) && !Object.keys(keyData).length) { 
+      //     console.log("Empty dataObject to submit into ", parentPath, keyValue)
+      //     return; 
+      //   } // console.log("triggered to save at FB:", parentPath, keyValue, keyData);
+      //   // return; 
+      //   // debugger; 
+
+      //   // 1. 
+      //   if (!fb.database().ref().child(parentPath)) { // target-path-node must exist to enable key-generator
+      //     fb.database().ref(parentPath).set([]);
+      //   }  
+
+      //   // 2. Get unique key for the dataObject at the target path ??? 
+      //   if (!keyValue) keyValue = fb.database().ref().child(parentPath).push().key;   // console.log("keyDataSubmit", keyValue, keyData); // return;
+
+      //   var targetPath = parentPath+'/'+keyValue;
+
+      //   //  3. Store&check the dataObject
+      //   //  3.1 STORE
+      //   fb.database().ref(targetPath).set(keyData);  console.log("saved at:", targetPath);
+        
+      //   //  3.2 CHECK-Option
+      //   if (1) {
+      //     var log;
+      //     fb.database().ref(targetPath)
+      //                  .once('value')
+      //                  .then(function(snapshot) { 
+      //                     log = snapshot.val().log;  console.log("data were saved in: "+targetPath, ", log: "+log); // , snapshot.val());
+      //                     this.lastpath = targetPath; 
+      //                   }.bind(this));
+      //   }
+
+      //   // 4. RESET  to avoid save when only one of the pair is altered !!
+        
+      //   this.keyvalue = undefined; 
+      //   this.keydata  = undefined; 
+      // },  
+
 
     });
   </script>
