@@ -55,14 +55,14 @@ The actions are triggered by changes
 
         // filter(order)Item
         item: {         
-          type: String,   
-          value: "_all_"  
+          type: String   
+          // value: "_all_"  
         },
         
         // filterValue (of orderItem)
         itemvalue:{     
-          type: String,
-          value: "_all_"  
+          type: String
+          // value: "_all_"  
         },
 
         // operator(relating queryItem and queryValue)
@@ -72,7 +72,6 @@ The actions are triggered by changes
 
         data: {
           type: Object,
-          // computed: 'fbQuery(fb, path, item, itemvalue)',
           notify: true
         },
 
@@ -86,17 +85,17 @@ The actions are triggered by changes
         }, 
         
         // Save multiple docs to same parentPath
-        savedata: {
+        updatedata: {
           type: Object
         },
 
         /**
-         * ctrl decides mode of db-update, see fbSet
+         * ctrl decides mode of fbdb-update, see fbSet
          */
-        savectrl: true,  
+        updatectrl: true,  
 
-        saveflag: {
-          value:false,
+        okflag: {
+          value:  false,
           notify: true
         },  
 
@@ -107,8 +106,8 @@ The actions are triggered by changes
       },
 
       observers: [
-        'fbQuery(fb, path, item, itemvalue)',
-        'fbSet(fb, path, savedata, savectrl)'
+        '_fbQuery(fb, path, item, itemvalue)',
+        '_fbSet(fb, path, updatedata, updatectrl)'
       ],
 
       ready: function() { // console.log("firequery-ready");
@@ -119,6 +118,22 @@ The actions are triggered by changes
       },
 
       /**
+       * Debounce shells
+       *  
+       */
+      _fbQuery: function(fb, path, item, value) { 
+        this.debounce('fbQuery', function () { // console.log("DebouncedStart fbQuery:", path, item, value);
+          this.fbQuery(fb, path, item, value); 
+        }, 100);
+      },
+
+      _fbSet: function(fb, parentPath, updateData, ctrl) { 
+        this.debounce('fbSet', function () { // console.log("DebouncedStart fbQuery:", path, item, value);
+          this.fbSet(fb, parentPath, updateData, ctrl); 
+        }, 100);
+      },
+
+      /**
        * Query content from fb database
        * @param  {[type]} fb     [description]
        * @param  {[type]} path   [description]
@@ -126,104 +141,155 @@ The actions are triggered by changes
        * @param  {[type]} value) {             console.log(path, item, value [description]
        * @return {[type]}        [description]
        */
-      fbQuery: function(fb, path, item, value) {  console.log("Start fbQuery:", path, item, value);
+      fbQuery: function(fb, path, item, value) {  console.log("fb:queryArguments:", path, item, value, typeof value); 
 
-        if (item == "_all_") {
+        var op   = this.operator, // optional operator 
+            ops  = ["<", ">", "!"],
+            self = this,
+            count = this.count; 
+
+        var queryMake = function (ref, value, count) {  
+         
+          if (typeof value == "string") { // Refine "ref" for wildcards and operators 
+
+            var wildcard, numvalue,
+                wildStarPos = value.indexOf("*"),
+                wildHashPos = value.indexOf("#"); // 
+           
+            if (ops.indexOf(value.substring(0,1)) >= 0) {
+              op    = value.substring(0,1);
+              value = value.substring(1); 
+            }   
+
+            if (wildStarPos > 0) { 
+
+              wildcard = value.substring(0, wildStarPos);   console.log("wildcardStar Query: ", "path="+path, "var="+ item, "wild=" + wildcard); 
+              ref = ref.startAt(wildcard).endAt(wildcard+"\uf8ff");
+
+            } else if (wildHashPos > 0) {
+              var von = value.replace(/#/g, "0"),
+                  bis = value.replace(/#/g, "9");
+
+              wildcard = value.substring(0, wildHashPos);   console.log("wildcardHash Query: ", "path="+path, "var="+ item, "von="+von, "bis="+bis); 
+              ref = ref.startAt(parseFloat(von)).endAt(parseFloat(bis));
+            }    
+         
+          } 
+
+          numvalue = parseFloat(value);  
+       
+          if (!isNaN(numvalue)) value = numvalue;
+
+          if (!op) {             console.log("fb:strictValueQuery: ", "path="+path, "var="+ item, "val=" + value); 
+            
+              ref = ref.equalTo(value);
+            // if (isNaN(numvalue)) ref = ref.equalTo(value);
+            // else             ref = ref.equalTo(numvalue);
+
+          } else if (op=="<") {  console.log("fb:rangeQuery < : ", "path="+path, "var="+ item, "val=" + value); 
+             
+              ref = ref.startAt(0).endAt(value);
+
+          } else if (op==">") {  console.log("fb:rangeQuery > : ", "path="+path, "var="+ item, "val=" + value); 
+             
+              ref = ref.startAt(value);
+          }   
+
+          // OPTIONAL : return 'count' records(objects) only 
+          if (count > 0) { 
+            ref = ref.limitToFirst(count); console.log("query max. "+count+" documents only: ", ref);
+          } // console.log("fbQuery prepared: ", ref);
+
+          return ref;  
+        };
+
+        // 1.1 Query nodes at path (without item-query)    
+        if (item == "_all_") {  console.log("fb:pathQuery: ", "path="+path);
 
           fb.database().ref(path).once('value').then(
-            function(snapshot) { 
-              console.log("snapped pathmode", snapshot.val());
-              return snapshot.val();
+            function(snapshot) {  console.log("fb:queryResult", snapshot.val());
+              self.data = snapshot.val();
+              // return snapshot.val();
             },
-            function(error) {
-              console.log("fbQueryNode", error);
+            function(error) {     console.log("fb:queryError", error);
               return; 
             })
         }
+        // 1.2 wildcard-item-query : NOT (YET) AVAILABLE
+        // if (item.indexOf("*") >= 0) {   console.log("check existence of multiple 'wildcarded' properties"); 
+
 
         // 2.1 BUILD the fbQuery 
-        var op  = this.operator, // optional operator 
-            ops = ["<", ">", "!"];
+        var queries = [];
 
         var ref = fb.database()
-                    .ref(path);
+                    .ref(path)
+                    .orderByChild(item);
 
-        if (item.indexOf("*") >= 0) { // console.log("check existence of multiple "wildcarded" properties"); 
+        if (value == '_all_') {  console.log("fb:itemAllQuery: ", "path="+path, "var="+ item);
 
+          ref = ref.startAt(0).endAt("z");       // query numeric + string values
+          // ref = ref.startAt("A").endAt("z");  // all string values  
+          // ref = ref.startAt("a").endAt("z");  // lowercase string values only  
+          // ref = ref.startAt("A").endAt("Z");  // uppercase string values only  
+          // OPTIONAL : return 'count' records(objects) only 
 
-        } else if (value && (value != '_all_') ) {
+          if (count > 0) ref = ref.limitToFirst(count); 
 
-          ref = ref.orderByChild(item);
+          queries[0] = ref.once("value").then(function(snap){return snap.val();}) ; // queryMake(ref, value, count); 
+        
+        } else if (Array.isArray(value)) { console.log("fb:itemValueListQuery: ", "path="+path, "var="+ item, value);
+          // query records for multiple values of a property
+          var values = value;
+          var refMake = function(val) {
+            var q = queryMake(ref, val, count),
+                q = q.once("value").then(function(snap) {
+                  return snap.val();
+                });
+            return q;
+          }
           
-          var wildcard, numvalue,
-          		wildStarPos = value.indexOf("*"),
-          		wildHashPos = value.indexOf("#"); // 
-         
-          if (ops.indexOf(value.substring(0,1)) >= 0) {
-            op    = value.substring(0,1);
-            value = value.substring(1); 
-          }   
+          queries = values.map(refMake);
 
-          if (wildStarPos > 0) { 
+        } else {  console.log("fb:itemValueQuery: ", "path="+path, "var="+ item, value);
+      
+          ref = queryMake(ref, value, count); 
+          
+          queries[0] = ref.once("value").then(function(snap){return snap.val();}) ; // queryMake(ref, value, count); 
 
-            wildcard = value.substring(0, wildStarPos);   console.log("wildcardStar Query: ", "path="+path, "var="+ item, "wild=" + wildcard); 
-            ref = ref.startAt(wildcard).endAt(wildcard+"\uf8ff");
+        } // console.log("queries", queries);
 
-          } else if (wildHashPos > 0) {
-          	var von = value.replace(/#/g, "0"),
-          			bis = value.replace(/#/g, "9");
-
-            wildcard = value.substring(0, wildHashPos);   console.log("wildcardHash Query: ", "path="+path, "var="+ item, "von="+von, "bis="+bis); 
-           	ref = ref.startAt(parseFloat(von)).endAt(parseFloat(bis));
-
-          } else {	// DEFAULT
-
-            numvalue = parseFloat(value);  
-            if (!isNaN(numvalue)) value = numvalue;
-            
-            if (!op) {             console.log("strictValueQuery: ", "path="+path, "var="+ item, "val=" + value); 
-              
-                ref = ref.equalTo(value);
-              // if (isNaN(numvalue)) ref = ref.equalTo(value);
-              // else             ref = ref.equalTo(numvalue);
-
-            } else if (op=="<") {  console.log("rangeQuery < : ", "path="+path, "var="+ item, "val=" + value); 
-               
-                ref = ref.startAt(0).endAt(value);
-
-            } else if (op==">") {  console.log("rangeQuery > : ", "path="+path, "var="+ item, "val=" + value); 
-               
-                ref = ref.startAt(value);
-            }   
-
-          } // console.log("fbQuery prepared: ", ref); 
-
-        } else { // DEFAULT QUERY if no specific value queried 
-
-            ref = ref.orderByChild(item); 
-            ref = ref.startAt(0).endAt("z");    // numeric + string values
-            // ref = ref.startAt("A").endAt("z");     // all string values  
-            // ref = ref.startAt("a").endAt("z");  // lowercase string values only  
-            // ref = ref.startAt("A").endAt("Z");  // uppercase string values only  
-        }
-
-        // OPTIONAL : return 'count' records(objects) only 
-        var count = this.count; 
-        if (count > 0) { 
-          ref = ref.limitToFirst(count); console.log("query max. "+count+" documents only: ", ref);
-        } 
 
         // 2.2 APPLY the fbQuery and return results 
         //     Does not work with "return" to a 'computed property'
-        var that = this;
-        ref.once('value')
-        // return ref.once('value')
-           .then(function(snapshot) {  console.log("snapshot.val()=", snapshot.val());
-              that.data = snapshot.val();
-              // return snapshot.val();
+        // console.log("ref to apply:", ref);     
+        // ref.once('value')
+        Promise.all(queries)
+           .then(function(qdata) { // console.log("fb:queryResult, value(",self.item,", ",self.itemvalue,")=", qdata); // , merged);
+              var alldata = {}; 
+             
+              // Use reduce-function
+              // var mergedata = function(total, data) {
+              //   Object.keys(data).forEach(function(k){ 
+              //     total[k] = data[k];
+              //   })
+              // }
+              // alldata = qdata.reduce(mergedata, {});
+             
+              // Simple approach
+              qdata.forEach(function(data){
+                if (data != null) {
+                  Object.keys(data).forEach(function(k){
+                    alldata[k] = data[k];
+                  })
+                }    
+              });   // console.log("alldata", alldata);
+             
+              self.data = alldata;
+              // return alldata; 
            })
-           .catch( function (errorObject) {
-              console.log("FB-query failed with " + errorObject.code);  
+           .catch( function (errorObject) { console.log("fb:queryFailed with " + errorObject.code);  
+              // self.itemvalue = undefined;
               return;
            });
       },
@@ -232,162 +298,141 @@ The actions are triggered by changes
        * Insert/replace a set of objects/documents into common parentPath
        * @param  {string} fb         [description]
        * @param  {string} parentPath [description]
-       * @param  {object} savedata   collection of path/document pairs 
+       * @param  {object} updateData collection of path/document pairs 
        * @param  {any}    ctrl       controls type of save operation  
        * @return {Boolean}           successflag 
        */
-      fbSet: function(fb, parentPath, savedata, ctrl) { console.log("fbSet STARTING", ctrl, typeof savedata);  
+      fbSet: function(fb, parentPath, updateData, ctrl) { console.log("fbSet STARTING", ctrl, typeof updateData);  
         // save the doc-reference to database
-        if ((typeof savedata != "object") || (Object.keys(savedata).length==0)) { 
+        if ((typeof updateData != "object") || (Object.keys(updateData).length==0)) { 
           console.log("Empty dataObject to submit into ", parentPath)
           return; 
-        } console.log("trigger to save at FB:", parentPath, Object.keys(savedata), ctrl); // return; 
-        // debugger; 
+        } console.log("fb:set childs in path="+parentPath, Object.keys(updateData).length, ctrl); // return; 
 
-        // 1. target-path-node must exist 
+        // 2. update fb with updateData at parentPath 
+        
+        //    target-path-node must exist 
         //    to enable childs key-generator
         if (!fb.database().ref().child(parentPath)) { 
           fb.database().ref(parentPath).set([]);
         }  
-
-        // 2. update fb with savedata at parentPath 
-        var replaceflag; 
         var that = this;
 
         //  2.1  replace complete node-content
-        if (ctrl=="_replace_") {  
+        if (ctrl=="_parent_") {  
+
           fb.database().ref(parentPath)
-             .set(savedata)
-             .then(function(){
-                console.log("node-replace done!", savedata)
-                that.saveflag = true; 
+             .set(updateData)
+             .then(function(){  console.log("node-replace done!", updateData)
+                that.okflag = true; 
              })
-             .catch(function(){
-                console.log("err-node-replace"); 
+             .catch(function(){ console.log("err-node-replace"); 
+                that.okflag = false; 
              }); 
           return;    
         }      
 
-        // 2.2 update docs existing in parent ref 
-        //   = map savedata to array of fbSet-promises
+        // 2.2 update childNodes existing in parentPath 
+        //   = map updateData into array of fb-setPromises
 
-        var updateDocs = function(ref, data) {
-          
-          var updateDoc = function(k) {
-            var prom = ref.child(k).set(data[k]);
-            return prom; 
+        var updateNodes = function(ref, updateData, replace) { 
+          // Update ref-childnodes with nodedata
+          var updateNode = function(k) {
+            // if (!ref.child(k)) return Promise.resolve();
+            // A. Replace  
+            if (replace) return  ref.child(k).set(updateData[k]);
+
+            // B. Update all items defined in updateData for node k
+            var refchild = ref.child(k),
+                nodeData = updateData[k];  
+
+            var updateItem = function(item) {
+              return refchild.child(item).set(nodeData[item]);
+            }
+
+            return Object.keys(nodeData).map(updateItem);  
           }; 
 
-          return Object.keys(data).map(updateDoc);
+          return Object.keys(updateData).map(updateNode);
         };  
 
-        var updateItems = function(ref, data, item) {
+        var updateNodeItems  = function(ref, updateData, item) {
+          // Update ONE item(property) of ref-childnodes 
+          // if it is set in updateData 
           var updateItem = function(k) {
-            var refdoc = ref.child(k); 
-            var prom = refdoc.child(item).set(data[k][item]);
-            return prom; 
+            if (updateData[k][item]) { 
+              var refchild = ref.child(k); 
+              // if (!refChild) return Promise.resolve(); 
+              return refchild.child(item).set(updateData[k][item]);
+            }
+            return Promise.resolve(); // dummy promise 
           }; 
-          return Object.keys(data).map(updateItem);  
+
+          return Object.keys(updateData).map(updateItem);  
         };
 
         var ref = fb.database().ref(parentPath);
         
         var allP=[];   
 
-        Promise.resolve(savedata)
-        
-          .then(function(data){
-            // Create an array of  
-            console.log("ctrl=", ctrl); 
-            if (ctrl == "_doc_") {
-
-              allP = updateDocs(ref, data);            console.log("Replace COMPLETE update-documents"); 
-
-            } else if (Array.isArray(ctrl)) {   console.log("Replace MULTIPLE properties of update-documents"); 
-
-              ctrl.forEach(function(item){ 
-
-                allP = allP.concat(updateItems(ref, data, item));  
-
-              })
-
-            } else if (typeof ctrl == "string") { console.log("Replace ONE property of update-documents"); 
-
-              allP = updateItems(ref, data, ctrl); // Object.keys(data).map(updateItem);  
-
-            } else {                            console.log("Replace COMPLETE update-documents"); 
-
-              allP = updateDocs(ref, data);   
-
-            } console.log(allP.length + " Promises", allP );
+        Promise.resolve(updateData)
+        .then(function(data){     // console.log("ctrl=", ctrl); 
           
-            return Promise.all(allP);           // !!!
-            //***********************
-          })
-          .then (function(values){
-            console.log("promises done: " + values.length, values)
-            that.saveflag = true; 
-            this.savedata = undefined;
-          })
-          .catch(function() {
-            console.log("err-childs-update");
-            that.saveflag = false; 
-            this.savedata = undefined;
-          }); 
+          // Create an array of  
+          if (ctrl == "_replace_") {             console.log("fb:Set Replace COMPLETE content of child-nodes by updateData");
+
+            allP = updateNodes(ref, data, true);  
+
+          } else if (ctrl == "_update_") {       console.log("fb:Set Update/append all properties of child-nodes passed in updateData"); 
+
+            allP = updateNodes(ref, data);   
+
+          } else if (typeof ctrl == "string") {  console.log("fb:Set Replace ONE property in all child-nodes"); 
+
+            allP = updateNodeItems(ref, data, ctrl); // Object.keys(data).map(updateItem);  
+
+          } else if (Array.isArray(ctrl)) {      console.log("fb:Set Replace MULTIPLE properties in child-nodes"); 
+
+            ctrl.forEach(function(item){ 
+
+              allP = allP.concat(updateNodeItems(ref, data, item));  
+
+            })
+
+          } else {                               console.log("fb:Set Replace all properties of child-nodes as defined in ??? "); 
+
+            allP = updateNodes(ref, data);   
+
+          } // console.log(allP.length + " Promises", allP );
+        
+          return Promise.all(allP);           // !!!
+          //***********************
+        })
+        .then (function(values){
+          console.log("fb:Set done for n=" + values.length + " nodes"); // , values)
+          that.okflag   = true; 
+          that.updatedata = undefined;
+        })
+        .catch(function() {
+          console.log("err-childs-update");
+          that.okflag   = false; 
+          that.updatedata = undefined;
+        }); 
 
       },
 
       /**
-      */
-      fbDelete: function(fb, parentPath, ctrl) {
+       * Remove docs from fb-database
+       * @param  {[type]} fb         [description]
+       * @param  {[type]} parentPath [description]
+       * @param  {[type]} ctrl       [description]
+       * @return {[type]}            [description]
+       */
+      // fbDelete: function(fb, parentPath, ctrl) {
 
+      //   this.fbSet(fb, parentPath, ctrl); 
 
-      }  
-
-
-
-      /* OLD */ 
-      // fbSetKey: function(fb, parentPath, keyValue, keyData) { 
-
-      //   // save the doc-reference to database
-      //   if ((typeof keyData == Object) && !Object.keys(keyData).length) { 
-      //     console.log("Empty dataObject to submit into ", parentPath, keyValue)
-      //     return; 
-      //   } // console.log("triggered to save at FB:", parentPath, keyValue, keyData);
-      //   // return; 
-      //   // debugger; 
-
-      //   // 1. 
-      //   if (!fb.database().ref().child(parentPath)) { // target-path-node must exist to enable key-generator
-      //     fb.database().ref(parentPath).set([]);
-      //   }  
-
-      //   // 2. Get unique key for the dataObject at the target path ??? 
-      //   if (!keyValue) keyValue = fb.database().ref().child(parentPath).push().key;   // console.log("keyDataSubmit", keyValue, keyData); // return;
-
-      //   var targetPath = parentPath+'/'+keyValue;
-
-      //   //  3. Store&check the dataObject
-      //   //  3.1 STORE
-      //   fb.database().ref(targetPath).set(keyData);  console.log("saved at:", targetPath);
-        
-      //   //  3.2 CHECK-Option
-      //   if (1) {
-      //     var log;
-      //     fb.database().ref(targetPath)
-      //                  .once('value')
-      //                  .then(function(snapshot) { 
-      //                     log = snapshot.val().log;  console.log("data were saved in: "+targetPath, ", log: "+log); // , snapshot.val());
-      //                     this.lastpath = targetPath; 
-      //                   }.bind(this));
-      //   }
-
-      //   // 4. RESET  to avoid save when only one of the pair is altered !!
-        
-      //   this.keyvalue = undefined; 
-      //   this.keydata  = undefined; 
-      // },  
-
+      // }  
 
     });
   </script>

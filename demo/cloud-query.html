@@ -54,6 +54,7 @@
         }
       </style>
 
+      <!-- A. Common UI -->
       <p>Query CloudMetadata objects by meta-properties using Firebase queries</p>
 
       <paper-dropdown-menu label="Query properties">
@@ -70,7 +71,24 @@
 
       <hr/>
       
-      <!-- QUERY blocks -->
+      <!-- B. QUERY element   -->      
+      <fire-query 
+        app       = "wolke7" 
+        path      = "cplocal" 
+        item      = "[[item]]" 
+        itemvalue = "[[itemvalue]]" 
+        data      = "{{data}}">
+      </fire-query>
+
+      <!-- C. Alternative QUERY UI -->
+
+      <template is='dom-if' if="{{isQueryItem(item, 'not/year/character')}}">
+      <!-- <template is='dom-if' if="{{isQueryItem(item, 'genus')}}"> -->
+        <!-- Generic Queries for objects which contain selected properties (any value) -->
+        <p>
+          [[querycount]] metaRecords of cloud-images described with property: <b>[[item]]</b> 
+        </p>
+      </template>    
 
       <template is='dom-if' if="{{isQueryItem(item, 'character')}}">
         <!-- Refine Query for objects with "character"-property 
@@ -84,61 +102,46 @@
           <paper-tab>Heap</paper-tab>
           <paper-tab>Sheet</paper-tab>
           <paper-tab>Fleecy</paper-tab>
-          <!-- <paper-tab>f*</paper-tab> -->
         </paper-tabs>
 
-        <fire-query 
-          app="wolke7" 
-          path="cplocal" 
-          item="[[item]]" 
-          itemvalue="[[charvalue]]" 
-          data="{{data}}">
-        </fire-query>
-
         <p>[[querycount]] metaRecords of cloud-images with value <b>[[charvalue]]</b> of <b>form-character</b>-classification  <a href="https://www.rmets.org/weather-and-climate/observing/luke-howard-and-cloud-names" target="_blank">(Howard/1802)</a>.</p>
-      
       </template>
 
       <template is='dom-if' if="{{isQueryItem(item, 'year')}}">
-        <!-- Queries for YEAR-property refined with arbitrarily selected YEAR-values  -->
+        <!-- Refine Queries for YEAR-property with arbitrarily selected YEAR-values  -->
 
         <paper-input class="inp" label="select a year" value="{{year}}"></paper-input>
 
-        <fire-query 
-          app       = "wolke7" 
-          path      = "cplocal" 
-          item      = "[[item]]" 
-          itemvalue = "[[year]]" 
-          data      = "{{data}}"> 
-        </fire-query>
+        <paper-dropdown-menu label="Query years" id="someyears">
+          <paper-listbox class="dropdown-content" multi 
+                         attr-for-selected="value" 
+                         on-iron-select="showyears"
+                         on-iron-deselect="showyears">
+            <paper-item value="2004">2004</paper-item>
+            <paper-item value="2005">2005</paper-item>
+            <paper-item value="2006">2006</paper-item>
+            <paper-item value="2007">2007</paper-item>
+            <paper-item value="2008">2008</paper-item>
+            <paper-item value="2009">2009</paper-item>
+          </paper-listbox>
+        </paper-dropdown-menu>
 
-        <p>[[querycount]] metaRecords of cloud-images for year(s) <b>[[year]]</b>. (The query is based on numerical year-values)</p>
+        <p>
+          [[querycount]] metaRecords of cloud-images for year(s) <b>[[year]]</b>. 
+          (The query is based on numerical year-values)
+        </p>
       
       </template>
 
-      <template is='dom-if' if="{{isQueryItem(item, 'not,year,character')}}">
-        <!-- Generic Queries for objects which contain selected properties (any value) -->
-        
-        <fire-query 
-          app       = "wolke7" 
-          path      = "cplocal" 
-          item      = "[[item]]" 
-          itemvalue = "_all_" 
-          data      = "{{data}}">
-        </fire-query>
-        
-        <p>[[querycount]] metaRecords of cloud-images described with property: <b>[[item]]</b> </p>
+      <hr/>
 
-      </template>    
-
-
-      <!-- OOUTPUT-blocks --> 
+      <!-- OUTPUT-blocks --> 
 
       <!-- A. GENERIC view&process : 'dom-repeat' --> 
       
       <template is='dom-repeat' items='{{imas}}' as='img'>
         
-        <!-- A.1 Show a row with cloud-properties at client-->
+        <!-- Show a LOG-row with meta-properties at client-->
         <div>
           <span class="small">[[img.index]]</span>
           <span>[[img.title]]</span>
@@ -146,27 +149,20 @@
           <span >[[iteminfo(img)]]</span>
         </div>
 
-        <!-- A.2  Update/Save a single cloud-metaObject to fb-server -->
-        <!-- <fire-query 
-          app      ="wolke7" 
-          path     ="cplocal" 
-          key      ="[[img.fbkey]]" 
-          keydata  ="[[img.item]]">
-        </fire-query> -->  
-
       </template>
 
       <!-- B. Optional: SPECIFIC view-element using 'Promise.all' --> 
       
       <!-- <cloud-list></cloud-list>       -->
 
-      <!-- C. GENERIC process-element(save) using 'Promise.all' -->
+
+      <!-- C. GENERIC process-element (fi. logging) using process-output (logdata) -->
       
       <fire-query 
-        app      ="wolke7" 
-        path     ="cplocal" 
-        savedata ="[[savedata]]"
-        savectrl ="logged">
+        app        = "wolke7" 
+        path       = "cplocal" 
+        updatedata = "[[logdata]]"
+        updatectrl = "_update_">
       </fire-query>  
     
     </template>
@@ -182,46 +178,52 @@
             
             fbapp : "",
 
-            charindex : -1,  // = index of query-path-options
-
+            charindex : {
+              value: -1,  // = index of query-path-options
+              observer: 'getCharValue'
+            },  
             // special case type-character
             charvalue: {
               type: String,
-              computed: 'getCharValue(charindex)'
+              value: ""
+            },
+            // special case type-character
+            year: {
+              // type: Number,
+              value: 2010
             },
 
             path:  {
               type: String
             },
 
+            // 
             items:{
               type: Array,
               observer: 'useItems'
             },
-
             values:{
               type: Array,
               observer: 'useValues'
             },
 
+            // 
             itemindex: {
               type: String,
-              observer: 'getitem'
+              observer: 'getQueryItem'
             }, 
-
             item: {
               type: String
             }, 
-            
             // special case type-character
             itemvalue: {
-              type: String,
-              computed: 'getValue(itemindex)'
+              // type: String,
+              computed: 'getQueryValue(item, charvalue, year)'
             },
 
             data: {
               type: Object,
-              value: [] 
+              value: {} 
             },
 
             imas: {
@@ -229,9 +231,9 @@
               computed: 'imaMetaLoad(data)'
             },
 
-            savedata: {
+            logdata: {
               type: Object,
-              computed: 'imaMetaSave(imas)'
+              computed: 'imaLogSave(imas)'
             },
 
           },
@@ -239,9 +241,16 @@
           observers : [
           ], 
 
+          showyears: function(e) { 
+            var years = e.target.selectedValues; console.log("showyears", years);
+            this.year = years.toString();
+            // this.$.someyears.$.menuButton.ignoreSelect = true;
+          },
+
           ready: function(){
             this.charindex = 0;    // triggers view of FIRST Query-set
-            this.item       = "type-character";
+            this.item      = "type-character";
+            // this.$.someyears.$.menuButton.ignoreSelect = true;
             // this.itemvalue = 'none';
             // this.item      = "type-year";
             // this.itemvalue = 2002;
@@ -259,50 +268,65 @@
            * Change queryItem
            * @param  {String} n Name of query-property
           */
-          getitem: function(n){ 
-            this.charvalue  = "_all_";
-            this.charindex  = -1;
+          getQueryItem: function(itemname){ 
+            this.item = itemname;
+            this.charindex  = 0;
             this.querycount = "";
-            this.item = n;
+          },
+
+          // 
+          getQueryValue: function(item, charvalue, year) { console.log("getQueryValue.LOG:", item, charvalue, year, typeof year);
+            // specific to match the cases required by this demo 
+            var qValue; 
+            var asNumber = function(s) {
+              if (typeof s == "string") n = parseInt(s);
+              else                      n = s;
+              return n;
+            };
+
+            if (item=="type-year") { 
+              if      (typeof year == "number" )    qValue = year; 
+              else if (year.split(",").length > 1)  qValue = year.split(",").map(asNumber);
+              else                                  qValue = asNumber(year);
+            } else if (item=="type-character") qValue =  charvalue;
+            else                               qValue =  "_all_"; 
+            console.log("getQueryValue.Use:", qValue);  
+
+            return qValue;
           },
 
           useItems: function(n,o) {   console.log("query items:", n);
           },
-
           useValues: function(n,o) {  console.log("query values:", n);
           },
-
           // 
-          getCharValue: function(index) { console.log("charValueLOG:", index, this.item);
+          getCharValue: function(index) { console.log("charCharValue.LOG:", index, this.item);
             var items = {0:"heap", 1:"sheet", 2:"fleecy"};
             value = items[index];
-            return value;
-          },
-          // 
-          getValue: function(index) { console.log("getValueLOG:", index, this.item);
-            var value = "_all_"; 
-            return value;
+            this.charvalue = value;
           },
 
-          // 
-          imaMetaLoad: function(data) { console.log("raw data", data); // , itemname, itemvalue) { 
+          // Transform db-query-response into client-usable data-structure
+          imaMetaLoad: function(data) {  // console.log("imaMetaLoad START", data);
           
             this.querycount = "";
-            if (!data) return;
-
-            var itemname  = this.item; // as used for query !!
+            if (!data) return;  
 
             if (!Array.isArray(data)) {
-              var keys = Object.keys(data), obj;
+              var keys = Object.keys(data), 
+                  obj;
               data  = keys.map(function(k){ 
                 obj = {};
                 obj.item  = data[k];        
                 obj.fbkey = k;
                 return obj;
               }); 
-            }; // console.log("cloudDataArray:", data); 
+            };  
+            if (!data.length) return;  // console.log("raw data", data); 
 
             // Prepare a standard-array (url, item) for "slide-show"
+            var itemname  = this.item; // as used for query !!
+
             var ima , title, index, nn = data.length, imas = [];
 
             data.forEach( function(ima,index){  // console.log(index, item);
@@ -323,36 +347,41 @@
               imas.push(ima)
             }); 
             
-            this.querycount = imas.length;  console.log("imageArray.length="+this.querycount); 
+            this.querycount = imas.length;  // console.log("clientDataArray.length="+this.querycount); 
             //****************************
             return imas; 
           },
 
-          imaMetaSave: function(imas) { // console.log("imaMetaSave", imas);
+          // Transform client-datastructure into log
+          imaLogSave: function(imas) { // console.log("imaLogSave", imas);
             if (!imas) return; 
-            var data, dataset = {}, d = new Date(); // console.log("exporting-1", d, imas) 
-            imas.forEach( function(ima,index){  // cons
-              var log =          d.getDate()  
-                        + "-" + (d.getMonth()+1) 
-                        + "-" + d.getFullYear() 
-                        + " " + d.getHours() 
-                        + ":" + d.getMinutes();
-              //data = ima.item;
-              //data.log = log;
-              data = {"logged":log};
+            var log, data, dataset = {};
+
+            var d = new Date(); // console.log("exporting-1", d, imas) 
+            imas.forEach( function(ima,index){  
+              log = d.getDate()  
+                    + "-" + (d.getMonth()+1) 
+                    + "-" + d.getFullYear() 
+                    + " " + d.getHours() 
+                    + ":" + d.getMinutes()
+                    + ":" + d.getSeconds();
+              data = {
+                "logged": log,
+                "user": "wgp"
+              };
               dataset[ima.fbkey] = data;
-            }); console.log("imaMetaSave-2", dataset);
+            }); // console.log("imaLogSave-2", dataset);
             return dataset;
           }, 
           
-          isQueryItem: function(queryitem, key) {  
-            var keys = key.split(","),
-                key  = keys[0];  console.log(queryitem, key, keys);
+          isQueryItem: function(queryitem, key) {  // console.log("GUI-adapter", queryitem);
+            var keys = key.split("/"),
+                key1 = keys[0];  // console.log("Test-Item(s):", key1, keys);
 
-            if (queryitem.indexOf(key) >= 0) return true;
+            if (queryitem.indexOf(key1) >= 0) return true;
 
-            if (key == "not") {
-              var flag=true; 
+            if (key1 == "not") {
+              var flag = true; 
               keys.every(function(k){
                 if (queryitem.indexOf(k) >= 0) {
                   flag = false;

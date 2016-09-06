@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+<head>
+  <base href="http://polygit.org/components/">
+  <script src="webcomponentsjs/webcomponents-lite.js"></script>
+  <link rel="import" href="polymer/polymer.html">
+</head>
+<body>
+
+  <my-element></my-element>
+
+  <dom-module id="my-element">
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+
+    <template>
+      <button on-tap="mutate">Mutate</button>
+      <pre>[[sum]]</pre>
+    </template>
+
+    <script>
+      HTMLImports.whenReady(function() {
+        Polymer({
+          is: 'my-element',
+          properties: {
+            a: {
+              type: Number,
+              value: 1
+            },
+            b: {
+              type: Number,
+              value: 2
+            },
+            sum: {
+              type: Number,
+              readOnly: true,
+              value: 0
+            },
+          },
+          observers: [
+            '_sum(a, b)'
+          ],
+          mutate: function() {
+            this.a = Math.floor(Math.random() * 100);
+            this.b = Math.floor(Math.random() * 100);
+          },
+          _sum: function(a, b) {
+            var sum = a + b;
+            this.debounce('sum', function() {
+              console.log(sum);
+              this._setSum(sum);
+            });
+          },
+          _setSum: function(sum) {
+            this.sum = sum;
+          }
+        });
+      });
+    </script>
+  </dom-module>
+
+</body>
+</html>
