@@ -91,7 +91,7 @@ The actions are triggered by changes
         },
 
         /**
-         * ctrl decides mode of db-update, see fbSave
+         * ctrl decides mode of db-update, see fbSet
          */
         savectrl: true,  
 
@@ -108,7 +108,7 @@ The actions are triggered by changes
 
       observers: [
         'fbQuery(fb, path, item, itemvalue)',
-        'fbSave(fb, path, savedata, savectrl)'
+        'fbSet(fb, path, savedata, savectrl)'
       ],
 
       ready: function() { // console.log("firequery-ready");
@@ -236,7 +236,7 @@ The actions are triggered by changes
        * @param  {any}    ctrl       controls type of save operation  
        * @return {Boolean}           successflag 
        */
-      fbSave: function(fb, parentPath, savedata, ctrl) { console.log("fbSave STARTING", ctrl, typeof savedata);  
+      fbSet: function(fb, parentPath, savedata, ctrl) { console.log("fbSet STARTING", ctrl, typeof savedata);  
         // save the doc-reference to database
         if ((typeof savedata != "object") || (Object.keys(savedata).length==0)) { 
           console.log("Empty dataObject to submit into ", parentPath)
@@ -269,7 +269,7 @@ The actions are triggered by changes
         }      
 
         // 2.2 update docs existing in parent ref 
-        //   = map savedata to array of fbSave-promises
+        //   = map savedata to array of fbSet-promises
 
         var updateDocs = function(ref, data) {
           
@@ -335,10 +335,19 @@ The actions are triggered by changes
             this.savedata = undefined;
           }); 
 
+      },
+
+      /**
+      */
+      fbDelete: function(fb, parentPath, ctrl) {
+
+
       }  
 
+
+
       /* OLD */ 
-      // fbSaveKey: function(fb, parentPath, keyValue, keyData) { 
+      // fbSetKey: function(fb, parentPath, keyValue, keyData) { 
 
       //   // save the doc-reference to database
       //   if ((typeof keyData == Object) && !Object.keys(keyData).length) { 
