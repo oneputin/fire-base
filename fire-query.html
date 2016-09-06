@@ -148,6 +148,7 @@ The actions are triggered by changes
             self = this,
             count = this.count; 
 
+        // Bbuild a query for different data/structures of value  
         var queryMake = function (ref, value, count) {  
          
           if (typeof value == "string") { // Refine "ref" for wildcards and operators 
@@ -202,6 +203,7 @@ The actions are triggered by changes
 
           return ref;  
         };
+
 
         // 1.1 Query nodes at path (without item-query)    
         if (item == "_all_") {  console.log("fb:pathQuery: ", "path="+path);
@@ -264,32 +266,26 @@ The actions are triggered by changes
         //     Does not work with "return" to a 'computed property'
         // console.log("ref to apply:", ref);     
         // ref.once('value')
+
+        // Reduce-function to merge multiple collections
+        var mergeColls = function(total, data) { // console.log("mergeColls", data);
+          if (data != null) { 
+            Object.keys(data).forEach(function(k){ 
+              total[k] = data[k];
+            });
+            return total;
+          }
+        };
+
         Promise.all(queries)
-           .then(function(qdata) { // console.log("fb:queryResult, value(",self.item,", ",self.itemvalue,")=", qdata); // , merged);
-              var alldata = {}; 
+           .then(function(qdata) { // console.log("fb:promiseOutput, value(",self.item,", ",self.itemvalue,")=", qdata); // , merged);
              
-              // Use reduce-function
-              // var mergedata = function(total, data) {
-              //   Object.keys(data).forEach(function(k){ 
-              //     total[k] = data[k];
-              //   })
-              // }
-              // alldata = qdata.reduce(mergedata, {});
+              var alldata = qdata.reduce(mergeColls, {});
              
-              // Simple approach
-              qdata.forEach(function(data){
-                if (data != null) {
-                  Object.keys(data).forEach(function(k){
-                    alldata[k] = data[k];
-                  })
-                }    
-              });   // console.log("alldata", alldata);
-             
-              self.data = alldata;
+              if (alldata) self.data = alldata;
               // return alldata; 
            })
            .catch( function (errorObject) { console.log("fb:queryFailed with " + errorObject.code);  
-              // self.itemvalue = undefined;
               return;
            });
       },
