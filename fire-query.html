@@ -132,9 +132,9 @@ The actions are triggered by changes
         }, 100);
       },
 
-      _fbSet: function(_fb, parentPath, updateData, ctrl) { 
+      _fbSet: function(_fb, parentPath, updateData, updateCtrl) { 
         this.debounce('fbSet', function () { // console.log("DebouncedStart fbQuery:", path, item, value);
-          this.fbSet(_fb, parentPath, updateData, ctrl); 
+          this.fbSet(_fb, parentPath, updateData, updateCtrl); 
         }, 100);
       },
 
@@ -305,7 +305,7 @@ The actions are triggered by changes
        * @param  {any}    ctrl       controls type of save operation  
        * @return {Boolean}           successflag 
        */
-      fbSet: function(_fb, parentPath, updateData, ctrl) { // console.log("fb:Set STARTING", ctrl, typeof updateData);  
+      fbSet: function(_fb, parentPath, updateData, updateCtrl) { // console.log("fb:Set STARTING", ctrl, typeof updateData);  
         // save the doc-reference to database
         if ((typeof updateData != "object") || (Object.keys(updateData).length==0)) { 
           console.log("Empty dataObject to submit into ", parentPath)
@@ -338,7 +338,7 @@ The actions are triggered by changes
         // 2.2 update childNodes existing in parentPath 
         //   = map updateData into array of fb-setPromises
 
-        var updateNodes = function(ref, updateData, replace) { 
+        var updateNodes = function(ref, updateData, replace) {  
           // Update ref-childnodes with nodedata
           var updateNode = function(k) { 
             // if (!ref.child(k)) return Promise.resolve();
@@ -346,16 +346,17 @@ The actions are triggered by changes
             if (replace)  return ref.child(k).set(updateData[k]);
 
             // B. Update all items defined in updateData for node k
-            var refchild    = ref.child(k),
-                newnodeData = updateData[k];  console.log(k, newnodeData, refchild); 
+            var refchild     = ref.child(k),
+                newchildData = updateData[k];  
 
-            var updateItem = function(prop) {
-              return refchild.child(prop).set(newnodeData[prop]);
+            var updateItem = function(prop) { 
+              var val = newchildData[prop]; // console.log(k, prop, val);
+              return refchild.child(prop).set(val);
             }
 
-            return Object.keys(nodeData).map(updateItem);  
+            return Object.keys(newchildData).map(updateItem);  
           }; 
-
+          // console.log("updateData", Object.keys(updateData), updateData);
           return Object.keys(updateData).map(updateNode);
         };  
 
