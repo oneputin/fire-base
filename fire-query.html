@@ -310,7 +310,7 @@ The actions are triggered by changes
         if ((typeof updateData != "object") || (Object.keys(updateData).length==0)) { 
           console.log("Empty dataObject to submit into ", parentPath)
           return; 
-        } console.log("fb:set "+Object.keys(updateData).length+" childs in path="+parentPath, ctrl); // return; 
+        } console.log("fb:set "+Object.keys(updateData).length+" childs in path="+parentPath, updateCtrl); // return; 
 
         // 2. update fb with updateData at parentPath 
         
@@ -322,7 +322,7 @@ The actions are triggered by changes
         var that = this;
 
         //  2.1  replace complete node-content
-        if (ctrl=="_parent_") {  
+        if (updateCtrl=="_parent_") {  
 
           _fb.database().ref(parentPath)
              .set(updateData)
@@ -340,17 +340,17 @@ The actions are triggered by changes
 
         var updateNodes = function(ref, updateData, replace) { 
           // Update ref-childnodes with nodedata
-          var updateNode = function(k) {
+          var updateNode = function(k) { 
             // if (!ref.child(k)) return Promise.resolve();
             // A. Replace  
-            if (replace) return  ref.child(k).set(updateData[k]);
+            if (replace)  return ref.child(k).set(updateData[k]);
 
             // B. Update all items defined in updateData for node k
-            var refchild = ref.child(k),
-                nodeData = updateData[k];  
+            var refchild    = ref.child(k),
+                newnodeData = updateData[k];  console.log(k, newnodeData, refchild); 
 
-            var updateItem = function(item) {
-              return refchild.child(item).set(nodeData[item]);
+            var updateItem = function(prop) {
+              return refchild.child(prop).set(newnodeData[prop]);
             }
 
             return Object.keys(nodeData).map(updateItem);  
@@ -379,30 +379,30 @@ The actions are triggered by changes
         var allP=[];   
 
         Promise.resolve(updateData)
-        .then(function(data){     // console.log("ctrl=", ctrl); 
+        .then(function(data){     // console.log("ctrl=", updateCtrl); 
           
           // Create an array of  
-          if (ctrl == "_replace_") {             console.log("fb:Set Replace COMPLETE content of child-nodes by updateData");
+          if        (updateCtrl == "_replace_") {     console.log("fb:Set Replace COMPLETE content of child-nodes by updateData");
 
             allP = updateNodes(ref, data, true);  
 
-          } else if (ctrl == "_update_") {       console.log("fb:Set Update/append all properties of child-nodes passed in updateData"); 
+          } else if (updateCtrl == "_update_") {      console.log("fb:Set Update/append all properties of child-nodes passed in updateData"); 
 
             allP = updateNodes(ref, data);   
 
-          } else if (typeof ctrl == "string") {  console.log("fb:Set Replace ONE property in all child-nodes"); 
+          } else if (typeof updateCtrl == "string") { console.log("fb:Set Replace ONE property in all child-nodes"); 
 
-            allP = updateNodeItems(ref, data, ctrl); // Object.keys(data).map(updateItem);  
+            allP = updateNodeItems(ref, data, updateCtrl); // Object.keys(data).map(updateItem);  
 
-          } else if (Array.isArray(ctrl)) {      console.log("fb:Set Replace MULTIPLE properties in child-nodes"); 
+          } else if (Array.isArray(updateCtrl)) {     console.log("fb:Set Replace MULTIPLE properties in child-nodes"); 
 
-            ctrl.forEach(function(item){ 
+            updateCtrl.forEach(function(item){ 
 
               allP = allP.concat(updateNodeItems(ref, data, item));  
 
             })
 
-          } else {                               console.log("fb:Set Replace all properties of child-nodes as defined in ??? "); 
+          } else {                                    console.log("fb:Set Replace all properties of child-nodes as defined in ??? "); 
 
             allP = updateNodes(ref, data);   
 
