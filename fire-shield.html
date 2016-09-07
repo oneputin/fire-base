@@ -16,7 +16,9 @@
 <link rel="import" href="fire-base.html">
 
 <!--
-`fire-shield` manages app-access based on firebase-utility.  
+`fire-shield` manages access to web-apps based on firebase-provided login-utilities.  
+
+Enables as well anonymous as authorized logins (more ...)
 
 @element fire-shield
 @demo demo/index.html
@@ -156,8 +158,6 @@
       
       properties: {
 
-        startflag: 0,
-
         app: {  
           type: String
         },
@@ -188,6 +188,9 @@
           value: {}, 
           notify: true        
         }, 
+
+        startflag: 0,
+
         toast : {
           type: String,
           notify: true

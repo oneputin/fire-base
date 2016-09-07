@@ -155,7 +155,6 @@
       
       <!-- <cloud-list></cloud-list>       -->
 
-
       <!-- C. GENERIC process-element (fi. logging) using process-output (logdata) -->
       
       <fire-query 
@@ -241,7 +240,9 @@
           observers : [
           ], 
 
+
           showyears: function(e) { 
+            // utility to extract values from multiselect element into a CSV
             var years = e.target.selectedValues; console.log("showyears", years);
             this.year = years.toString();
             // this.$.someyears.$.menuButton.ignoreSelect = true;
@@ -256,8 +257,8 @@
             // this.itemvalue = 2002;
           },
 
-          // presentation util
           iteminfo: function(item) {
+            // utility to create info-string from item-object with name- value-props 
             if (!item.name) return "";
             var info = "|| " + item.name;
             if (item.value && (item.value.length < 20)) info = info+" : "+ item.value;
@@ -274,7 +275,6 @@
             this.querycount = "";
           },
 
-          // 
           getQueryValue: function(item, charvalue, year) { console.log("getQueryValue.LOG:", item, charvalue, year, typeof year);
             // specific to match the cases required by this demo 
             var qValue; 
@@ -290,6 +290,7 @@
               else                                  qValue = asNumber(year);
             } else if (item=="type-character") qValue =  charvalue;
             else                               qValue =  "_all_"; 
+
             console.log("getQueryValue.Use:", qValue);  
 
             return qValue;

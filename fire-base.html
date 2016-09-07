@@ -27,12 +27,20 @@ It provides synchronization between client and server
     Polymer({
       is: 'fire-base',
       properties: {
-        /* = "fb-config-collection" available for this app */  
+
+        /**
+         * "fb configcollection" = collection of fb-app-configs made available for this app
+         * (actually hard-wired in element "fire-base-conf.html") 
+         * @type {Object}
+         */
         fbcc: {
           type: Object
         },
 
-        // key of active fb-configuration
+        /**
+         * INP: key of firebase-app to address
+         * @type {String}
+        */
         app: {  
           type: String,
           notify: true

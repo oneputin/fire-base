@@ -3,7 +3,10 @@
 <link rel="import" href="fire-query.html">
 
 <!--
-`fire-values` returns all different values assigned to the same key in firebase-objects returned by <fire-query>.  
+`fire-values` detects all different values 
+ assigned to the same property in child-nodes of path.  
+
+Useful in webclients to prepare interactive queries of path-childnodes from fb-databse 
 
 @element fire-values
 @demo demo/index.html
@@ -19,7 +22,7 @@
       }
     </style>
 
-    <fire-query app="[[app]]" path="[[path]]" item="[[item]]" itemvalue="_all_" data="{{data}}" trigger="{{trigger}}"></fire-query>
+    <fire-query app="[[app]]" path="[[path]]" item="[[item]]" itemvalue="_all_" data="{{_data}}"></fire-query>
 
     <!-- <div>query values</div> -->
 
@@ -33,35 +36,56 @@
       is: 'fire-values',
       
       properties: {
-        // key of firebase-app
+        /**
+         * INP: key of firebase-app to address
+         * @type {String}
+        */
         app:  {
           type: String
         },
-        // path to query-objects
+
+        /**
+         * IN: (parent)path of nodes to analyse 
+         * @type {String}
+         */
         path:  {
           type: String
         },
 
+        /**
+         * IN: property of nodes to analyze for different values
+         * @type {Object}
+         */
         item: {
           type: String
         }, 
         
+        /**
+         * IN: (optional) filter to constrain the values
+         * @type {Object}
+         */
         filter: {
           type: String // , value: "type"
         },
         
-        trigger: 1,
-
-        data: {
-          type: Object,
-          value: []
-        },
-
+        /**
+         * OUT: 
+         * @type {Object}
+         */
         values: {
           type: Object,
           notify: true,
-          computed: 'filterValues(data)'
-        } 
+          computed: 'filterValues(_data)'
+        }, 
+
+        /**
+         * raw result of values-query
+         * @type {Object}
+         */
+        _data: {
+          type: Object,
+          value: []
+        },
 
       },
 
@@ -74,8 +98,12 @@
         // this.itemvalue = 2002;
       },
 
-      // Extracting ...
-      filterValues: function(data, olddata) { 
+      /**
+       * Singularizes the raw value query 
+       * @param  {Object} data raw result of fb-query
+       * @return {Array}       Unique array of available values 
+       */
+      filterValues: function(data) { 
         if (!data) return;
 
         if (!Array.isArray(data)) {
@@ -97,7 +125,7 @@
         }); // console.log("values(n="+values.length+")", values);
         if (!values.length) return values;
 
-        // B. Apply a filter 
+        // B. Apply a "filter" 
         if (this.filter) { 
           var  arr=[], filter = this.filter; console.log("filter", filter);
           values.forEach(function(item,index){  

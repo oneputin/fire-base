@@ -19,7 +19,7 @@ The actions are triggered by changes
       }
     </style>
     
-    <fire-base app="{{app}}" fb="{{fb}}" ></fire-base>
+    <fire-base app="{{app}}" fb="{{_fb}}" ></fire-base>
 
   </template>
 
@@ -30,75 +30,84 @@ The actions are triggered by changes
 
       properties: {
         /**
-         * Key of requested firebase-app
+         * INP: key of firebase-app to address (_fb)
          * @type {String}
         */
         app: {  
           type: String
         },
-        /**
-         * Firebase app
-         * @type {Object}
-         */
-        fb: {
-          type: Object
-        },
 
+        /**
+         * INP: path to (target/parent)Node 
+         * @type {String}
+         */
         path:{
           type: String
         },
 
-        // CTRL-param 
-        lastpath:{
-          type: String
-        },
-
-        // filter(order)Item
+        /**
+         * IN-query: queryChild (in path)
+         * @type {String}
+         */
         item: {         
           type: String   
           // value: "_all_"  
         },
         
-        // filterValue (of orderItem)
+        /**
+         * IN-query: queryValue(s)
+         * @type {String}
+         */
         itemvalue:{     
           type: String
           // value: "_all_"  
         },
 
-        // operator(relating queryItem and queryValue)
-        operator: {      
-          type: String
-        },
-
+        /**
+         * OUT-query: Queried collection
+         * @type {Object}
+         */
         data: {
           type: Object,
           notify: true
         },
 
-        // Save one doc (keyvalue/keydata)
-        keyvalue: {
-          type: String
-        },  
-
-        keydata: {
-          type: Object
-        }, 
-        
-        // Save multiple docs to same parentPath
+        /**
+         * IN-set: multiple docs to update at same parentPath
+         * @type {Object}
+         */
         updatedata: {
           type: Object
         },
 
         /**
-         * ctrl decides mode of fbdb-update, see fbSet
+         * IN-set: ctrls processing of updatedata, see fbSet
          */
         updatectrl: true,  
 
-        okflag: {
+
+        /**
+         * Firebase app
+         * @type {Object}
+         */
+        _fb: {
+          type: Object
+        },
+
+        // _operator(optionally relating queryItem and queryValue)
+        _operator: {      
+          type: String
+        },
+
+        _okflag: {
           value:  false,
           notify: true
         },  
 
+        /**
+         * OUT: Ctrlmsg (optional)
+         * @type {String}
+         */
         toast : {
           type: String,
           notify: true
@@ -106,30 +115,26 @@ The actions are triggered by changes
       },
 
       observers: [
-        '_fbQuery(fb, path, item, itemvalue)',
-        '_fbSet(fb, path, updatedata, updatectrl)'
+        '_fbQuery(_fb, path, item, itemvalue)',
+        '_fbSet(_fb, path, updatedata, updatectrl)'
       ],
 
       ready: function() { // console.log("firequery-ready");
-      },
-
-      logKeydata: function(v) {
-        // console.log("log", v);
       },
 
       /**
        * Debounce shells
        *  
        */
-      _fbQuery: function(fb, path, item, value) { 
+      _fbQuery: function(_fb, path, item, value) { 
         this.debounce('fbQuery', function () { // console.log("DebouncedStart fbQuery:", path, item, value);
-          this.fbQuery(fb, path, item, value); 
+          this.fbQuery(_fb, path, item, value); 
         }, 100);
       },
 
-      _fbSet: function(fb, parentPath, updateData, ctrl) { 
+      _fbSet: function(_fb, parentPath, updateData, ctrl) { 
         this.debounce('fbSet', function () { // console.log("DebouncedStart fbQuery:", path, item, value);
-          this.fbSet(fb, parentPath, updateData, ctrl); 
+          this.fbSet(_fb, parentPath, updateData, ctrl); 
         }, 100);
       },
 
@@ -141,9 +146,9 @@ The actions are triggered by changes
        * @param  {[type]} value) {             console.log(path, item, value [description]
        * @return {[type]}        [description]
        */
-      fbQuery: function(fb, path, item, value) {  console.log("fb:queryArguments:", path, item, value, typeof value); 
+      fbQuery: function(_fb, path, item, value) {  console.log("fb:queryArguments:", path, item, value, typeof value); 
 
-        var op   = this.operator, // optional operator 
+        var op   = this._operator, // optional _operator 
             ops  = ["<", ">", "!"],
             self = this,
             count = this.count; 
@@ -151,7 +156,7 @@ The actions are triggered by changes
         // Bbuild a query for different data/structures of value  
         var queryMake = function (ref, value, count) {  
          
-          if (typeof value == "string") { // Refine "ref" for wildcards and operators 
+          if (typeof value == "string") { // Refine "ref" for wildcards and _operators 
 
             var wildcard, numvalue,
                 wildStarPos = value.indexOf("*"),
@@ -208,14 +213,16 @@ The actions are triggered by changes
         // 1.1 Query nodes at path (without item-query)    
         if (item == "_all_") {  console.log("fb:pathQuery: ", "path="+path);
 
-          fb.database().ref(path).once('value').then(
+          _fb.database().ref(path).once('value').then(
             function(snapshot) {  console.log("fb:queryResult", snapshot.val());
               self.data = snapshot.val();
+              // return;
               // return snapshot.val();
             },
             function(error) {     console.log("fb:queryError", error);
               return; 
-            })
+            });
+          return;
         }
         // 1.2 wildcard-item-query : NOT (YET) AVAILABLE
         // if (item.indexOf("*") >= 0) {   console.log("check existence of multiple 'wildcarded' properties"); 
@@ -224,7 +231,7 @@ The actions are triggered by changes
         // 2.1 BUILD the fbQuery 
         var queries = [];
 
-        var ref = fb.database()
+        var ref = _fb.database()
                     .ref(path)
                     .orderByChild(item);
 
@@ -298,32 +305,32 @@ The actions are triggered by changes
        * @param  {any}    ctrl       controls type of save operation  
        * @return {Boolean}           successflag 
        */
-      fbSet: function(fb, parentPath, updateData, ctrl) { console.log("fbSet STARTING", ctrl, typeof updateData);  
+      fbSet: function(_fb, parentPath, updateData, ctrl) { // console.log("fb:Set STARTING", ctrl, typeof updateData);  
         // save the doc-reference to database
         if ((typeof updateData != "object") || (Object.keys(updateData).length==0)) { 
           console.log("Empty dataObject to submit into ", parentPath)
           return; 
-        } console.log("fb:set childs in path="+parentPath, Object.keys(updateData).length, ctrl); // return; 
+        } console.log("fb:set "+Object.keys(updateData).length+" childs in path="+parentPath, ctrl); // return; 
 
         // 2. update fb with updateData at parentPath 
         
         //    target-path-node must exist 
         //    to enable childs key-generator
-        if (!fb.database().ref().child(parentPath)) { 
-          fb.database().ref(parentPath).set([]);
+        if (!_fb.database().ref().child(parentPath)) { 
+          _fb.database().ref(parentPath).set([]);
         }  
         var that = this;
 
         //  2.1  replace complete node-content
         if (ctrl=="_parent_") {  
 
-          fb.database().ref(parentPath)
+          _fb.database().ref(parentPath)
              .set(updateData)
              .then(function(){  console.log("node-replace done!", updateData)
-                that.okflag = true; 
+                that._okflag = true; 
              })
              .catch(function(){ console.log("err-node-replace"); 
-                that.okflag = false; 
+                that._okflag = false; 
              }); 
           return;    
         }      
@@ -367,7 +374,7 @@ The actions are triggered by changes
           return Object.keys(updateData).map(updateItem);  
         };
 
-        var ref = fb.database().ref(parentPath);
+        var ref = _fb.database().ref(parentPath);
         
         var allP=[];   
 
@@ -406,12 +413,12 @@ The actions are triggered by changes
         })
         .then (function(values){
           console.log("fb:Set done for n=" + values.length + " nodes"); // , values)
-          that.okflag   = true; 
+          that._okflag   = true; 
           that.updatedata = undefined;
         })
         .catch(function() {
           console.log("err-childs-update");
-          that.okflag   = false; 
+          that._okflag   = false; 
           that.updatedata = undefined;
         }); 
 
@@ -424,9 +431,9 @@ The actions are triggered by changes
        * @param  {[type]} ctrl       [description]
        * @return {[type]}            [description]
        */
-      // fbDelete: function(fb, parentPath, ctrl) {
+      // fbDelete: function(_fb, parentPath, ctrl) {
 
-      //   this.fbSet(fb, parentPath, ctrl); 
+      //   this.fbSet(_fb, parentPath, ctrl); 
 
       // }  
 

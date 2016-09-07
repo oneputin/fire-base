@@ -2,7 +2,10 @@
 <link rel="import" href="fire-query.html">
 
 <!--
-`fire-keys` returns all obj-keys contained in queried firebase-objects.  
+`fire-keys` detects all properties 
+contained in at least one of the childNodes of path  
+
+Useful in webclients to prepare interactive queries of path-childnodes from fb-databse 
 
 @element fire-keys
 @demo demo/index.html
@@ -17,7 +20,7 @@
       }
     </style>
 
-    <fire-query app="[[app]]" path="[[path]]" item="[[item]]" itemvalue="[[itemvalue]]" data="{{data}}" trigger={{trigger}}></fire-query>
+    <fire-query app="[[app]]" path="[[path]]" item="[[_item]]" itemvalue="[[_itemvalue]]" data="{{_data}}"></fire-query>
 
   </template>
 
@@ -29,43 +32,53 @@
       
       properties: {
 
+        /**
+         * IN: key of firebase-app to address
+         * @type {String}
+        */
         app:  {
           type: String
         },
 
+        /**
+         * IN: parentPath to target-nodes
+         * @type {Object}
+         */
         path:  {
           type: String
         },
 
-        item: {
-          type: String,
-          value: "_path_"
-        }, 
-        
-        itemvalue: {
-          type: String
-        },
-
+        /**
+         * IN: 
+         * @type {Object}
+         */
         filter: {
           type: String // , value: "type"
         },
         
-        trigger: 1,
-
-        data: {
-          type: Object,
-          value: []
-        },
-
+        /**
+         * OUT: array of keys
+         * @type {Object}
+         */
         keys: {
           type: Object,
           notify: true,
-          computed: 'filterKeys(data)'
+          computed: 'filterKeys(_data)'
         }, 
 
-        key: {
+        _item: {
           type: String,
-          notify:true
+          value: "_all_"
+        }, 
+        
+        _itemvalue: {
+          type: String,
+          value: "_all_"
+        },
+
+        _data: {
+          type: Object,
+          value: []
         }
 
       },
@@ -79,6 +92,12 @@
         // this.itemvalue = 2002;
       },
 
+      /**
+       * [filterKeys description]
+       * @param  {[type]} data    [description]
+       * @param  {[type]} olddata [description]
+       * @return {[type]}         [description]
+       */
       filterKeys: function(data, olddata) { 
         if (!data) return;
 
