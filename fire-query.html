@@ -123,7 +123,7 @@ The actions are triggered by changes
       },
 
       /**
-       * Debounce shells
+       * Debouncing shells 
        *  
        */
       _fbQuery: function(_fb, path, item, value) { 
@@ -302,13 +302,13 @@ The actions are triggered by changes
        * @param  {string} fb         [description]
        * @param  {string} parentPath [description]
        * @param  {object} updateData collection of path/document pairs 
-       * @param  {any}    ctrl       controls type of save operation  
+       * @param  {any}    updatectrl controls type of update operation  
        * @return {Boolean}           successflag 
        */
       fbSet: function(_fb, parentPath, updateData, updateCtrl) { // console.log("fb:Set STARTING", ctrl, typeof updateData);  
         // save the doc-reference to database
         if ((typeof updateData != "object") || (Object.keys(updateData).length==0)) { 
-          console.log("Empty dataObject to submit into ", parentPath)
+          console.log("fb:set Empty dataObject to update into ", parentPath)
           return; 
         } console.log("fb:set "+Object.keys(updateData).length+" childs in path="+parentPath, updateCtrl); // return; 
 
@@ -422,7 +422,6 @@ The actions are triggered by changes
           that._okflag   = false; 
           that.updatedata = undefined;
         }); 
-
       },
 
       /**
