@@ -28,7 +28,7 @@
   <dom-module id="cloud-query">
 
     <template>
-    
+
       <style>
         :host {
           display: block;
@@ -70,31 +70,31 @@
       </paper-dropdown-menu>
 
       <hr/>
-      
-      <!-- B. QUERY element   -->      
-      <fire-query 
-        app       = "wolke7" 
-        path      = "cplocal" 
-        item      = "[[item]]" 
-        itemvalue = "[[itemvalue]]" 
+
+      <!-- B. QUERY element   -->
+      <fire-query
+        app       = "[[fbapp]]"
+        path      = "cplocal"
+        item      = "[[item]]"
+        itemvalue = "[[itemvalue]]"
         data      = "{{data}}">
       </fire-query>
 
       <!-- C. Alternative QUERY UI -->
 
       <template is='dom-if' if="{{isQueryItem(item, 'not/year/character')}}">
-      <!-- <template is='dom-if' if="{{isQueryItem(item, 'genus')}}"> -->
+        <!-- <template is='dom-if' if="{{isQueryItem(item, 'genus')}}"> -->
         <!-- Generic Queries for objects which contain selected properties (any value) -->
         <p>
-          [[querycount]] metaRecords of cloud-images described with property: <b>[[item]]</b> 
+          [[querycount]] metaRecords of cloud-images described with property: <b>[[item]]</b>
         </p>
-      </template>    
+      </template>
 
       <template is='dom-if' if="{{isQueryItem(item, 'character')}}">
-        <!-- Refine Query for objects with "character"-property 
+        <!-- Refine Query for objects with "character"-property
              by preselected "character"-values or "wildcard-filters" -->
         <p>
-          Select a "cloud-character" using name-input or from preselected values :  
+          Select a "cloud-character" using name-input or from preselected values :
           <paper-input class="inp" label="cloud character" value="{{charvalue}}"></paper-input>
         </p>
 
@@ -113,8 +113,8 @@
         <paper-input class="inp" label="select a year" value="{{year}}"></paper-input>
 
         <paper-dropdown-menu label="Query years" id="someyears">
-          <paper-listbox class="dropdown-content" multi 
-                         attr-for-selected="value" 
+          <paper-listbox class="dropdown-content" multi
+                         attr-for-selected="value"
                          on-iron-select="showyears"
                          on-iron-deselect="showyears">
             <paper-item value="2004">2004</paper-item>
@@ -127,20 +127,20 @@
         </paper-dropdown-menu>
 
         <p>
-          [[querycount]] metaRecords of cloud-images for year(s) <b>[[year]]</b>. 
+          [[querycount]] metaRecords of cloud-images for year(s) <b>[[year]]</b>.
           (The query is based on numerical year-values)
         </p>
-      
+
       </template>
 
       <hr/>
 
-      <!-- OUTPUT-blocks --> 
+      <!-- OUTPUT-blocks -->
 
-      <!-- A. GENERIC view&process : 'dom-repeat' --> 
-      
+      <!-- A. GENERIC view&process : 'dom-repeat' -->
+
       <template is='dom-repeat' items='{{imas}}' as='img'>
-        
+
         <!-- Show a LOG-row with meta-properties at client-->
         <div>
           <span class="small">[[img.index]]</span>
@@ -151,36 +151,36 @@
 
       </template>
 
-      <!-- B. Optional: SPECIFIC view-element using 'Promise.all' --> 
-      
+      <!-- B. Optional: SPECIFIC view-element using 'Promise.all' -->
+
       <!-- <cloud-list></cloud-list>       -->
 
       <!-- C. GENERIC process-element (fi. logging) using process-output (logdata) -->
-      
-      <fire-query 
-        app        = "wolke7" 
-        path       = "cplocal" 
+
+      <fire-query
+        app        = "wolke7"
+        path       = "cplocal"
         updatedata = "[[logdata]]"
         updatectrl = "_update_">
-      </fire-query>  
-    
+      </fire-query>
+
     </template>
 
     <script>
-    
+
       window.addEventListener('WebComponentsReady', function() {
         Polymer({
 
           is: 'cloud-query',
-          
+
           properties: {
-            
-            fbapp : "",
+
+            fbapp : "wolke7",
 
             charindex : {
               value: -1,  // = index of query-path-options
               observer: 'getCharValue'
-            },  
+            },
             // special case type-character
             charvalue: {
               type: String,
@@ -196,7 +196,7 @@
               type: String
             },
 
-            // 
+            //
             items:{
               type: Array,
               observer: 'useItems'
@@ -206,14 +206,14 @@
               observer: 'useValues'
             },
 
-            // 
+            //
             itemindex: {
               type: String,
               observer: 'getQueryItem'
-            }, 
+            },
             item: {
               type: String
-            }, 
+            },
             // special case type-character
             itemvalue: {
               // type: String,
@@ -222,7 +222,7 @@
 
             data: {
               type: Object,
-              value: {} 
+              value: {}
             },
 
             imas: {
@@ -238,10 +238,10 @@
           },
 
           observers : [
-          ], 
+          ],
 
 
-          showyears: function(e) { 
+          showyears: function(e) {
             // utility to extract values from multiselect element into a CSV
             var years = e.target.selectedValues; console.log("showyears", years);
             this.year = years.toString();
@@ -258,7 +258,7 @@
           },
 
           iteminfo: function(item) {
-            // utility to create info-string from item-object with name- value-props 
+            // utility to create info-string from item-object with name- value-props
             if (!item.name) return "";
             var info = "|| " + item.name;
             if (item.value && (item.value.length < 20)) info = info+" : "+ item.value;
@@ -269,29 +269,29 @@
            * Change queryItem
            * @param  {String} n Name of query-property
           */
-          getQueryItem: function(itemname){ 
+          getQueryItem: function(itemname){
             this.item = itemname;
             this.charindex  = 0;
             this.querycount = "";
           },
 
           getQueryValue: function(item, charvalue, year) { console.log("getQueryValue.LOG:", item, charvalue, year, typeof year);
-            // specific to match the cases required by this demo 
-            var qValue; 
+            // specific to match the cases required by this demo
+            var qValue;
             var asNumber = function(s) {
               if (typeof s == "string") n = parseInt(s);
               else                      n = s;
               return n;
             };
 
-            if (item=="type-year") { 
-              if      (typeof year == "number" )    qValue = year; 
+            if (item=="type-year") {
+              if      (typeof year == "number" )    qValue = year;
               else if (year.split(",").length > 1)  qValue = year.split(",").map(asNumber);
               else                                  qValue = asNumber(year);
             } else if (item=="type-character") qValue =  charvalue;
-            else                               qValue =  "_all_"; 
+            else                               qValue =  "_all_";
 
-            console.log("getQueryValue.Use:", qValue);  
+            console.log("getQueryValue.Use:", qValue);
 
             return qValue;
           },
@@ -300,7 +300,7 @@
           },
           useValues: function(n,o) {  console.log("query values:", n);
           },
-          // 
+          //
           getCharValue: function(index) { console.log("charCharValue.LOG:", index, this.item);
             var items = {0:"heap", 1:"sheet", 2:"fleecy"};
             value = items[index];
@@ -309,21 +309,21 @@
 
           // Transform db-query-response into client-usable data-structure
           imaMetaLoad: function(data) {  // console.log("imaMetaLoad START", data);
-          
+
             this.querycount = "";
-            if (!data) return;  
+            if (!data) return;
 
             if (!Array.isArray(data)) {
-              var keys = Object.keys(data), 
+              var keys = Object.keys(data),
                   obj;
-              data  = keys.map(function(k){ 
+              data  = keys.map(function(k){
                 obj = {};
-                obj.item  = data[k];        
+                obj.item  = data[k];
                 obj.fbkey = k;
                 return obj;
-              }); 
-            };  
-            if (!data.length) return;  // console.log("raw data", data); 
+              });
+            };
+            if (!data.length) return;  // console.log("raw data", data);
 
             // Prepare a standard-array (url, item) for "slide-show"
             var itemname  = this.item; // as used for query !!
@@ -331,39 +331,39 @@
             var ima , title, index, nn = data.length, imas = [];
 
             data.forEach( function(ima,index){  // console.log(index, item);
-              
-              item  = ima.item; 
+
+              item  = ima.item;
               index = "("+ (index+1) +"/" + nn +") ";
               title = item["title-main-pict"] ;
               if (item["title-sub-pict"]) title = title+" / "+item["title-sub-pict"] ;
-              
+
               ima.url   = item.url;
               ima.title = title;
               ima.index = index;
-              
-              if (itemname) { // as used for FDB-query 
+
+              if (itemname) { // as used for FDB-query
                 ima.name = itemname;
                 if (item[itemname]) ima.value=item[itemname]; // as queried from FDB
-              }  
+              }
               imas.push(ima)
-            }); 
-            
-            this.querycount = imas.length;  // console.log("clientDataArray.length="+this.querycount); 
+            });
+
+            this.querycount = imas.length;  // console.log("clientDataArray.length="+this.querycount);
             //****************************
-            return imas; 
+            return imas;
           },
 
           // Transform client-datastructure into log
           imaLogSave: function(imas) { // console.log("imaLogSave", imas);
-            if (!imas) return; 
+            if (!imas) return;
             var log, data, dataset = {};
 
-            var d = new Date(); // console.log("exporting-1", d, imas) 
-            imas.forEach( function(ima,index){  
-              log = d.getDate()  
-                    + "-" + (d.getMonth()+1) 
-                    + "-" + d.getFullYear() 
-                    + " " + d.getHours() 
+            var d = new Date(); // console.log("exporting-1", d, imas)
+            imas.forEach( function(ima,index){
+              log = d.getDate()
+                    + "-" + (d.getMonth()+1)
+                    + "-" + d.getFullYear()
+                    + " " + d.getHours()
                     + ":" + d.getMinutes()
                     + ":" + d.getSeconds();
               data = {
@@ -373,8 +373,8 @@
               dataset[ima.fbkey] = data;
             }); // console.log("imaLogSave-2", dataset);
             return dataset;
-          }, 
-          
+          },
+
           isQueryItem: function(queryitem, key) {  // console.log("GUI-adapter", queryitem);
             var keys = key.split("/"),
                 key1 = keys[0];  // console.log("Test-Item(s):", key1, keys);
@@ -382,20 +382,20 @@
             if (queryitem.indexOf(key1) >= 0) return true;
 
             if (key1 == "not") {
-              var flag = true; 
+              var flag = true;
               keys.every(function(k){
                 if (queryitem.indexOf(k) >= 0) {
                   flag = false;
                   return false;
-                }  
+                }
               })
-              return flag; 
-            } 
-            return false; 
+              return flag;
+            }
+            return false;
           }
 
         });
-      });   
+      });
     </script>
 
   </dom-module>

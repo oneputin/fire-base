@@ -22,20 +22,20 @@
   <dom-module id="cloud-db">
 
     <template>
-    
+
       <style>
         :host {
           display: block;
           padding: 10px;
         }
       </style>
-      
-      <template is="dom-if" if="{{fbapp}}">
-        <fire-base app="{{fbapp}}" fb="{{fb}}" ></fire-base>
-      </template>
 
-      <p>fb configured for "[[fbapp]]":</p>
-      <pre id="log"></pre>
+      <fire-base app="{{fbapp}}" fb="{{fb}}" fbconf="[[fbconf]]"></fire-base>
+
+      <!--<p>fb was configured for fb-project: "<span id="confname">[[fbapp]]</span>":</p>-->
+      <p>fb was configured for fb-project: "<span id="confname"></span>":</p>
+      <pre id="conflog"></pre>
+
 
     </template>
 
@@ -44,24 +44,35 @@
       Polymer({
 
         is: 'cloud-db',
-        
+
         properties: {
-          
-          fbapp : "",
+
+          fbapp : {
+              type: String
+          },
 
           fb: {
             type:Object,
             observer: 'showfb'
+          },
+
+          // FN des conf-files
+          fbconf: {
+            type: String
           }
 
         },
 
         ready: function(){
-          this.fbapp = "wolke7";    
+          // this.fbapp  = "wolke7";
+          // this.fbconf = "http://localhost:8080/components/fire-base/demo/conf.json"; // OK
+          // this.fbconf = "./conf.json"; // OK
+          this.fbconf = "conf.json";  // OK
         },
 
-        showfb: function(n,o){ console.log("logging", n.T)
-          this.$.log.innerHTML = JSON.stringify(n.T);   
+        showfb: function(fb){ // console.log("fb-config", fb.name, fb.options)
+          this.$.confname.innerHTML = fb.name;
+          this.$.conflog.innerHTML = JSON.stringify(fb.options, null, 2);
         }
 
       });

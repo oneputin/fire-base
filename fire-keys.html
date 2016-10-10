@@ -2,10 +2,10 @@
 <link rel="import" href="fire-query.html">
 
 <!--
-`fire-keys` detects all properties 
-contained in at least one of the childNodes of path  
+`fire-keys` detects all different properties occuring
+in at least one of the childNodes selected by querypath
 
-Useful in webclients to prepare interactive queries of path-childnodes from fb-databse 
+Useful in webclients to prepare interactive queries of path-childnodes from fb-databse
 
 @element fire-keys
 @demo demo/index.html
@@ -29,7 +29,7 @@ Useful in webclients to prepare interactive queries of path-childnodes from fb-d
     Polymer({
 
       is: 'fire-keys',
-      
+
       properties: {
 
         /**
@@ -49,13 +49,13 @@ Useful in webclients to prepare interactive queries of path-childnodes from fb-d
         },
 
         /**
-         * IN: 
+         * IN:
          * @type {Object}
          */
         filter: {
           type: String // , value: "type"
         },
-        
+
         /**
          * OUT: array of keys
          * @type {Object}
@@ -64,13 +64,13 @@ Useful in webclients to prepare interactive queries of path-childnodes from fb-d
           type: Object,
           notify: true,
           computed: 'filterKeys(_data)'
-        }, 
+        },
 
         _item: {
           type: String,
           value: "_all_"
-        }, 
-        
+        },
+
         _itemvalue: {
           type: String,
           value: "_all_"
@@ -85,7 +85,7 @@ Useful in webclients to prepare interactive queries of path-childnodes from fb-d
 
       observers : [
         // 'calcTarget(app, path)'
-      ], 
+      ],
 
       ready: function(){
         // this.item  = "type-year";
@@ -98,7 +98,7 @@ Useful in webclients to prepare interactive queries of path-childnodes from fb-d
        * @param  {[type]} olddata [description]
        * @return {[type]}         [description]
        */
-      filterKeys: function(data, olddata) { 
+      filterKeys: function(data, olddata) {
         if (!data) return;
 
         if (!Array.isArray(data)) {
@@ -113,17 +113,17 @@ Useful in webclients to prepare interactive queries of path-childnodes from fb-d
               return self.indexOf(v) === i;
           });
         }); // console.log("keys(n="+keys.length+")"); // , keys);
-        
-        if (keys.length && this.filter) { 
+
+        if (keys.length && this.filter) {
           var  fkeys=[], filter = this.filter; // console.log("filter", filter);
-          keys.forEach(function(item, index){  
+          keys.forEach(function(item, index){
             var n = item.indexOf(filter); // console.log(index, item, n);
             if ( n < 0) return; // console.log(index, item, n);
-            fkeys.push(item); 
+            fkeys.push(item);
           }); // console.log("fkeys(n="+fkeys.length+")", fkeys);
-          keys = fkeys; 
+          keys = fkeys;
         } // console.log("fkeys(n="+keys.length+")");
-        return keys; 
+        return keys;
       }
 
     });

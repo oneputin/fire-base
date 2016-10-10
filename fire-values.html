@@ -3,10 +3,10 @@
 <link rel="import" href="fire-query.html">
 
 <!--
-`fire-values` detects all different values 
- assigned to the same property in child-nodes of path.  
+`fire-values` detects all different values
+ assigned to the same property of items selected at given path.
 
-Useful in webclients to prepare interactive queries of path-childnodes from fb-databse 
+Useful to prepare interactive queries of path-childnodes
 
 @element fire-values
 @demo demo/index.html
@@ -34,10 +34,10 @@ Useful in webclients to prepare interactive queries of path-childnodes from fb-d
     Polymer({
 
       is: 'fire-values',
-      
+
       properties: {
         /**
-         * INP: key of firebase-app to address
+         * IN: key of firebase-app to address
          * @type {String}
         */
         app:  {
@@ -45,7 +45,7 @@ Useful in webclients to prepare interactive queries of path-childnodes from fb-d
         },
 
         /**
-         * IN: (parent)path of nodes to analyse 
+         * IN: (parent)path of nodes to analyse
          * @type {String}
          */
         path:  {
@@ -58,8 +58,8 @@ Useful in webclients to prepare interactive queries of path-childnodes from fb-d
          */
         item: {
           type: String
-        }, 
-        
+        },
+
         /**
          * IN: (optional) filter to constrain the values
          * @type {Object}
@@ -67,19 +67,19 @@ Useful in webclients to prepare interactive queries of path-childnodes from fb-d
         filter: {
           type: String // , value: "type"
         },
-        
+
         /**
-         * OUT: 
+         * OUT: values of queried property
          * @type {Object}
          */
         values: {
           type: Object,
           notify: true,
           computed: 'filterValues(_data)'
-        }, 
+        },
 
         /**
-         * raw result of values-query
+         * raw result of query
          * @type {Object}
          */
         _data: {
@@ -91,7 +91,7 @@ Useful in webclients to prepare interactive queries of path-childnodes from fb-d
 
       observers : [
         // 'calcTarget(app, path)'
-      ], 
+      ],
 
       ready: function(){
         // this.item  = "type-year";
@@ -99,11 +99,11 @@ Useful in webclients to prepare interactive queries of path-childnodes from fb-d
       },
 
       /**
-       * Singularizes the raw value query 
+       * Singularizes the raw value query
        * @param  {Object} data raw result of fb-query
-       * @return {Array}       Unique array of available values 
+       * @return {Array}       Unique array of available values
        */
-      filterValues: function(data) { 
+      filterValues: function(data) {
         if (!data) return;
 
         if (!Array.isArray(data)) {
@@ -111,12 +111,12 @@ Useful in webclients to prepare interactive queries of path-childnodes from fb-d
         } // console.log(data);
 
         // A. Collect all values used in (any) data-objects (z.B. img-metadata)
-        var queryname = this.item, 
-            values = [], 
+        var queryname = this.item,
+            values = [],
             nn=data.length;
 
         data.forEach(function(item,index){  // console.log(index, item);
-          if (!item[queryname] || item[queryname] === null || item[queryname] === undefined) return; 
+          if (!item[queryname] || item[queryname] === null || item[queryname] === undefined) return;
           // values.push(item[queryname]);
           values = values.concat(item[queryname]).filter(function(v,i,self){
               return self.indexOf(v) === i;
@@ -125,20 +125,20 @@ Useful in webclients to prepare interactive queries of path-childnodes from fb-d
         }); // console.log("values(n="+values.length+")", values);
         if (!values.length) return values;
 
-        // B. Apply a "filter" 
-        if (this.filter) { 
+        // B. Apply a "filter"
+        if (this.filter) {
           var  arr=[], filter = this.filter; console.log("filter", filter);
-          values.forEach(function(item,index){  
+          values.forEach(function(item,index){
             var n = item.indexOf(filter); // console.log(index, item, n);
             if ( n < 0) return; // console.log(index, item, n);
-            arr.push(item); 
+            arr.push(item);
           }); // console.log("fkeys(n="+fkeys.length+")", fkeys);
-          values = arr; 
+          values = arr;
         } else {
           values.sort();
         }// console.log("values(n="+values.length+")");
-        
-        return values; 
+
+        return values;
       }
 
     });

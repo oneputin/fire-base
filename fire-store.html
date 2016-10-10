@@ -5,7 +5,7 @@
 `fire-store` manages the transfer of data to/from the FB-storage
 
 @element fire-store
-@demo demo/cloud-db.html
+@demo demo/cloud-store.html
 -->
 
 <dom-module id="fire-store">
@@ -28,42 +28,42 @@
       is: 'fire-store',
       properties: {
 
-        app: {  
+        app: {
           type: String
         },
 
         fb: {
-          type: Object, 
+          type: Object,
           notify: true
         },
 
         authmode:{
-          type: String 
+          type: String
         },
 
-        user: {     // an "authorized user" is required for fb storage actions 
+        user: {     // an "authorized user" is required for fb storage actions
           type: Object,
           value: {},
           observer: 'debugLog'
         },
 
         path:{
-          type: String 
+          type: String
         },
 
         // triggers upload
-        srcfile: {     
+        srcfile: {
           type: Object,
-          observe: 'debugLog' 
+          observe: 'debugLog'
         },
 
         // optional addon to uploaded object(srcfile)
-        srcmeta: {     
-          type: Object 
+        srcmeta: {
+          type: Object
         },
 
-        // triggers download of a storeObject into file 
-        queryurl: {         
+        // triggers download of a storeObject into file
+        queryurl: {
           type: String
         },
 
@@ -79,56 +79,56 @@
       ],
 
       ready: function() { // console.log("firequery-ready");
-        if (!this.authmode ||(this.authmode==undefined)) { 
-          this.authmode="anonym"; 
+        if (!this.authmode ||(this.authmode==undefined)) {
+          this.authmode="anonym";
         }
       },
-      
+
       debugLog: function(obj, objold){ // console.log("Log of object/context:", obj, this);
 
       },
 
       /* store an Object to fb-storage, optionally together with metadata !!
-      */ 
+      */
       applyStorageUpload: function(fb, file, uploadpath, user) { console.log("start storageUpload ", user, uploadpath, fb, file);
-        var that = this;  
+        var that = this;
 
         var metadata = { // storage-object meta !!
           'contentType': file.type
-        }   
+        }
 
         if (this.srcmeta) { // created independently
           metadata["customMetadata"] = this.srcmeta;
         } console.log("Metadata of new storageObj [" + file.name+"]", metadata);
 
-        var uploadRef = fb.storage().ref(uploadpath);        
-       
-        var storeTask = uploadRef.child(file.name).put(file, metadata);  // STORE-TASK 
+        var uploadRef = fb.storage().ref(uploadpath);
+
+        var storeTask = uploadRef.child(file.name).put(file, metadata);  // STORE-TASK
 
         // Listen for errors and completion of the upload.
-        storeTask.on('state_changed', 
-          null, 
+        storeTask.on('state_changed',
+          null,
           function(error) {
             that.serverurl = "" ; // hide the last img !!
             console.error('STORETASK failed:', error);
-          }, 
-          function() {  
-            var snap  = storeTask.snapshot;  
-            // var bytes = snap.totalBytes; 
-            that.response = snap.metadata;   
-            // that.storageurl = that.response.downloadURLs[0];  
-            // console.log('responsemeta ', that.response ); 
+          },
+          function() {
+            var snap  = storeTask.snapshot;
+            // var bytes = snap.totalBytes;
+            that.response = snap.metadata;
+            // that.storageurl = that.response.downloadURLs[0];
+            // console.log('responsemeta ', that.response );
         });
       },
 
-      applyStorageQuery: function(fb, path, queryurl) {  console.log("BREAK at start storage query"); return; 
-        
-        if (this.item=="_path_") {  // console.log("applyPathQuery, path=", path); 
+      applyStorageQuery: function(fb, path, queryurl) {  console.log("BREAK at start storage query"); return;
+
+        if (this.item=="_path_") {  // console.log("applyPathQuery, path=", path);
           if (!cloudFB) this.initFB();
 
           var that = this; // ALTMODISCH (use bind() instead?)
-          
-          fb.database().ref(path).once('value').then(function(snapshot) { 
+
+          fb.database().ref(path).once('value').then(function(snapshot) {
             // console.log("snapped pathmode", snapshot.val());
             that.data = snapshot.val();
           })

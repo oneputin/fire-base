@@ -22,14 +22,14 @@
 
   <div>
     <h5>Demo of <span style="font-family: courier;">fire-store</span></h5>
-    <p>Saves a (cloud)image (+ tech metadata) into FB-storage 
-    and its semantic metadata into FB-Database</p>
+    <p>Saves a (cloud)image (+ tech metadata) into <b>FB-storage</b></p>
+    <p>Saves its semantic metadata into <b>FB-Database</b></p>
   </div>
 
-  <dom-module id="cloud-types">
+  <dom-module id="cloud-store">
 
     <template>
-    
+
       <style>
         :host {
           display: block;
@@ -47,24 +47,7 @@
           font-style: italic;
         }
       </style>
-
-      <paper-tabs selected="{{tabindex}}">
-        <paper-tab>Heap</paper-tab>
-        <paper-tab>Sheet</paper-tab>
-        <paper-tab>Fleecy</paper-tab>
-      </paper-tabs>
-
-      <fire-query app="wolke7" path="cp" item="type-character" itemvalue="[[itemvalue]]" data="{{data}}"></fire-query>
-
-      <p>Imagegroups of clouds with different form-character <a href="https://www.rmets.org/weather-and-climate/observing/luke-howard-and-cloud-names" target="_blank">(Howard/1802)</a>.</p>
-      
-      <template is='dom-repeat' items='{{imas}}' as='img'>
-        <div>
-          <span class="small">[[img.index]]</span>
-          <span>[[img.title]]</span>
-          <span class="pre">[[img.url]]</span>
-        </div>
-      </template>
+      <p>NOT implemented</p>
 
     </template>
 
@@ -72,10 +55,10 @@
       window.addEventListener('WebComponentsReady', function() {
         Polymer({
 
-          is: 'cloud-types',
-          
+          is: 'cloud-store',
+
           properties: {
-            
+
             fbapp : "",
 
             tabindex : -1,  // = index of query-path-options
@@ -94,8 +77,8 @@
               observer: 'useValues'
             },
 
-            item: "", 
-            
+            item: "",
+
             itemvalue: {
               type: String,
               computed: 'calcValue(tabindex)'
@@ -103,7 +86,7 @@
 
             data: {
               type: Object,
-              value: [] 
+              value: []
             },
 
             imas: {
@@ -114,7 +97,7 @@
 
           observers : [
             // 'calcTarget(fbapp, path)'
-          ], 
+          ],
 
           ready: function(){
             this.tabindex = 0;    // triggers view of FIRST Query-set
@@ -137,12 +120,12 @@
             return value;
           },
 
-          // 
-          createSlides: function(data, olddata) { 
+          //
+          createSlides: function(data, olddata) {
             if (!data) return;
             if (!Array.isArray(data)) {
               data =  Object.keys(data).map(function(k){return data[k]});
-            }  console.log("Howard: dataArray", data); 
+            }  console.log("Howard: dataArray", data);
 
             // Prepare a standard-array (url, item) for "slide-show"
             var ima , title, index, nn = data.length, imas = [];
@@ -157,16 +140,16 @@
               }
               imas.push(ima)
             }); console.log("slideArray-length=", imas.length);
-            return imas; 
+            return imas;
           }
 
         });
-      });   
+      });
     </script>
 
   </dom-module>
 
-  <cloud-types></cloud-types>
+  <cloud-store></cloud-store>
 
 </body>
 </html>
