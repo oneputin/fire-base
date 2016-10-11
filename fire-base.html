@@ -27,9 +27,9 @@ It provides synchronization between client and server
     </app-localstorage-element>  -->
 
     <iron-localstorage
-      name ="appstore"
-      value="{{appstore}}">
-      <!--on-iron-localstorage-load="_fbLoad">-->
+      name  = "appstore"
+      value = "{{appstore}}"
+      on-iron-localstorage-load="_fbLoad">
       <!--on-iron-localstorage-load-empty="_fbInitialize">-->
     </iron-localstorage>
 
@@ -145,8 +145,9 @@ It provides synchronization between client and server
       },
 
       confDataGet: function(rawdata){ console.log("confDataRaw", rawdata);
-        if (rawdata.access) {
-          this.fbcc = rawdata.access;
+        if (!rawdata) return;
+        if (rawdata.fbprojects) {
+          this.fbcc = rawdata.fbprojects;
         } else {
           this.fbcc = rawdata;
         }
@@ -172,14 +173,13 @@ It provides synchronization between client and server
 
       // restore from clients webstorage
       _fbRestore : function(appstore) {  console.log("appstore", appstore);
-        if (appstore["access"]) {
-            var storedfb = appstore["access"];
+        if (appstore["fbproject"]) {
+            var storedfb = appstore["fbproject"];
             if (!this.fb || (storedfb.name != this.fb.name)) {
               this.fb =  storedfb; console.log("Restored fbProject", this.fb);
             }
         };
       },
-
 
       /* initalizes webApp-firebase-instance(s)
          in a "multi-fb-env" */
@@ -241,10 +241,11 @@ It provides synchronization between client and server
         // 3. signIn
         var that = this;
         function signinOK(fb, user, msg) { // console.log(that);
-          that.user = user;                 // F1: toggle-enable for additional gui-elements, fi.uploadbutton
-          that.fb = fb;                     // F2: Activate this fb-access
-          that.appstore = {"access" : fb}; // F3: Store into appstore
-          console.log(msg+' SignIn Success for project:', that.appstore);
+          that.user = user;                // F1: toggle-enable for additional gui-elements, fi.uploadbutton
+          that.fb = fb;                    // F2: Activate this fb-access
+          if (!that.appstore) that.appstore = {};
+          that.appstore["fbproject"] = fb; // F3: Store into appstore
+          console.log(msg+' SignIn Success for project:', fb);
         }
         function signinError(error) {
           console.error('SignIn Error:', error);

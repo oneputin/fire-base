@@ -16,7 +16,7 @@
     "iron-iconset-svg": "PolymerElements/iron-iconset-svg#^1.0.9",
     "firebase": "^3.3.0",
     "app-storage": "PolymerElements/app-storage#^0.9.7",
-    "iron-localstorage": "PolymerElements/iron-localstorage#^1.0.6"
+    "iron-localstorage": "^1.0.6"
   },
   "devDependencies": {
     "iron-ajax": "PolymerElements/iron-ajax#^1.4.3",
