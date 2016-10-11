@@ -59,7 +59,7 @@ It provides synchronization between client and server
          */
         _fbcc: {
           type: Object,
-          observer: '_fbInitialize'
+          observer: '_fbSetup'
         },
 
         /**
@@ -91,7 +91,6 @@ It provides synchronization between client and server
       ],
 
       ready: function() { // console.log("firequery-ready");
-        // this._fbInitialize();
       },
 
       _confCheck: function(rawdata, flag){ console.log("confCheck. type/raw=", typeof rawdata, rawdata);
@@ -103,8 +102,8 @@ It provides synchronization between client and server
         }
       },
 
-      confDataGet: function(rawdata){ console.log("confDataRaw", rawdata);
-        if (!rawdata) return;
+      confDataGet: function(rawdata){
+        if (!rawdata) return; console.log("confDataRaw", rawdata);
         if (rawdata.fbprojects) { // Vereinbarung
           this._fbcc = rawdata.fbprojects;
         } else {
@@ -112,19 +111,22 @@ It provides synchronization between client and server
         }
       },
 
-      confError: function(logdata){
-        if (logdata) console.log("confError", logdata);
+      confError: function(err){
+        if (err) console.log("fb-config Error:", err.error);
+        this._fbcc = {"nodata":"nodata"};
       },
 
       /* initalizes webApp-firebase-instance(s)
          in a "multi-fb-env" */
-      _fbInitialize : function(fbcc) {
+      _fbSetup : function(fbcc) { console.log("fbcc", fbcc);
+        if (!fbcc || !Object.keys(fbcc).length) return;
 
-        if (!fbcc) {
-          console.log("ALERT. SETUP MISSING fb-configuration from DEMO");
+        if (fbcc["nodata"]) {
+          var msg = "SETUP-data MISSING. Use fire-base-DEFAULT?"
+          if (!confirm(msg)) return ;
           fbcc = fbccTest;
         }
-        var keys = Object.keys(fbcc); console.log("fbcc loaded:", keys, fbcc);
+        var keys = Object.keys(fbcc); console.log("keys of fbcc loaded:", keys); // , fbcc);
 
         if(this.app) {
           this.fbc = fbcc[this.app]; // FireBaseConfig
