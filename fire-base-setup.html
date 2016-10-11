@@ -1,0 +1,141 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-ajax/iron-ajax.html">
+
+<link rel="import" href="fire-base-lib.html">
+<link rel="import" href="fire-base-conf.html">
+
+<!--
+`fire-base` is an element that manages connections to firebase.
+It provides synchronization between client and server
+
+@element fire-base-setup
+-->
+
+<dom-module id="fire-base-setup">
+
+  <template>
+
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+
+    <!-- 2. BasicLogin via config-data -->
+    <iron-ajax
+        auto
+        url          = "[[confurl]]"
+        handle-as    = "json"
+        last-error   = "{{conferr}}"
+        last-response= "{{confdata}}">
+    </iron-ajax>
+
+  </template>
+
+  <script>
+
+    Polymer({
+      is: 'fire-base-setup',
+      properties: {
+        /**
+         * IN: key of firebase-project
+         * (as configured in fb-console)
+         * @type {String}
+        */
+        app: {
+          type: String
+        },
+
+        fbc: {
+          type: Object,
+          notify: true
+        },
+
+        /**
+         * IN: "FBConfigCollection" = collection of fb-app-configs
+         * available for this app
+         * (actually hard-wired in element "fire-base-conf.html")
+         * @type {Object}
+         */
+        _fbcc: {
+          type: Object,
+          observer: '_fbInitialize'
+        },
+
+        /**
+         * IN: configuration of app
+         * @type {String,Object}
+         */
+        fbconf: {
+          type : Object
+        },
+
+        // FB-CONFIG
+        confurl: {
+          value: ""
+        },
+        confdata: {
+          value: "",
+          observer: 'confDataGet'
+        },
+        conferr: {
+          value: "",
+          observer: 'confError'
+        }
+
+      },
+
+      observers: [
+        // '_getAuth(fb, authmode, email, password)'
+        '_confCheck(fbconf)'
+      ],
+
+      ready: function() { // console.log("firequery-ready");
+        // this._fbInitialize();
+      },
+
+      _confCheck: function(rawdata, flag){ console.log("confCheck. type/raw=", typeof rawdata, rawdata);
+        if (!rawdata) return;
+        if (typeof rawdata == "string") {
+          this.confurl = rawdata;
+        } else if (typeof rawdata == "object") {
+          this.confdata = rawdata;
+        }
+      },
+
+      confDataGet: function(rawdata){ console.log("confDataRaw", rawdata);
+        if (!rawdata) return;
+        if (rawdata.fbprojects) { // Vereinbarung
+          this._fbcc = rawdata.fbprojects;
+        } else {
+          this._fbcc = rawdata;
+        }
+      },
+
+      confError: function(logdata){
+        if (logdata) console.log("confError", logdata);
+      },
+
+      /* initalizes webApp-firebase-instance(s)
+         in a "multi-fb-env" */
+      _fbInitialize : function(fbcc) {
+
+        if (!fbcc) {
+          console.log("ALERT. SETUP MISSING fb-configuration from DEMO");
+          fbcc = fbccTest;
+        }
+        var keys = Object.keys(fbcc); console.log("fbcc loaded:", keys, fbcc);
+
+        if(this.app) {
+          this.fbc = fbcc[this.app]; // FireBaseConfig
+        }
+
+        if (!this.fbc ) {
+          this.fbc = fbcc[keys[0]];
+        } console.log("initializing project from :", this.fbc);
+
+      }
+
+    });
+  </script>
+</dom-module>

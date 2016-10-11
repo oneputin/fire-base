@@ -1,9 +1,8 @@
 <link rel="import" href="../polymer/polymer.html">
-<link rel="import" href="../iron-ajax/iron-ajax.html">
 <link rel="import" href="../iron-localstorage/iron-localstorage.html">
 
 <link rel="import" href="fire-base-lib.html">
-<link rel="import" href="fire-base-conf.html">
+<link rel="import" href="fire-base-setup.html">
 
 <!--
 `fire-base` is an element that manages connections to firebase.
@@ -23,23 +22,22 @@ It provides synchronization between client and server
       }
     </style>
 
-    <!--<app-localstorage-element key="" >
-    </app-localstorage-element>  -->
-
+    <!-- 1. QuickLogin via storeddata -->
     <iron-localstorage
-      name  = "appstore"
-      value = "{{appstore}}"
-      on-iron-localstorage-load="_fbLoad">
-      <!--on-iron-localstorage-load-empty="_fbInitialize">-->
+      name  = "fbstore"
+      value = "{{_fbc}}"
+      on-iron-localstorage-load       = "_fbstoreget"
+      on-iron-localstorage-load-empty = "_fbstoreget">
     </iron-localstorage>
 
-    <iron-ajax
-        auto
-        url       = "[[confurl]]"
-        handle-as = "json"
-        last-error   ="{{conferr}}"
-        last-response="{{confdata}}">
-    </iron-ajax>
+    <!-- 2. SetupLogin from ConfigData -->
+    <template is="dom-if" if="{{_fbconf}}">
+      <fire-base-setup
+          app    = "[[app]]"
+        	fbconf = "[[_fbconf]]"
+          fbc    = "{{fbc}}">
+      </fire-base-setup>
+    </template>
 
   </template>
 
@@ -48,39 +46,8 @@ It provides synchronization between client and server
     Polymer({
       is: 'fire-base',
       properties: {
-
         /**
-         * IN: "FBConfigCollection" = collection of fb-app-configs
-         * available for this app
-         * (actually hard-wired in element "fire-base-conf.html")
-         * @type {Object}
-         */
-        fbcc: {
-          type: Object,
-          observer: '_fbInitialize'
-        },
-
-        /**
-         * IN: configuration of app
-         * @type {String,Object}
-         */
-        fbconf: {
-          value: "",
-          observer: 'confCheck'
-        },
-        confurl: {
-          value: ""
-        },
-        confdata: {
-          value: "",
-          observer: 'confDataGet'
-        },
-        conferr: {
-          value: "",
-          observer: 'confError'
-        },
-        /**
-         * INP: key of firebase-project
+         * IN/OUT: key of firebase-project
          * (as configured in fb-console)
          * @type {String}
         */
@@ -100,13 +67,33 @@ It provides synchronization between client and server
           notify: true
         },
 
-        /* fb activated within app*/
-        appstore: {
-          type: Object,
-          value: {},
-          observer: '_fbActivate'
+        // SETUP
+        /**
+         * IN: configuration of appset
+         * @type {String,Object}
+         */
+        fbconf: {
+          type: Object
+        },
+        // dto as SETUP-trigger
+        _fbconf: {
+          type: Object
         },
 
+        /**
+         * IN: fb-configuration of app
+         * @type {Object}
+         */
+        fbc: {
+          type: Object,
+          observer: '_fbInitialize'
+        },
+        // dto as INIT-trigger
+        _fbc: {
+          type: Object
+        },
+
+        // AUTHENTIFICATION
         authmode: {
           type: String,
           value:""
@@ -132,161 +119,155 @@ It provides synchronization between client and server
       ],
 
       ready: function() { // console.log("firequery-ready");
-        // this._fbInitialize();
       },
 
-      confCheck: function(rawdata){ console.log("confCheck", rawdata, typeof rawdata);
-        if (!rawdata) return;
-        if (typeof rawdata == "string") {
-          this.confurl = rawdata;
-        } else if (typeof rawdata == "object") {
-          this.confdata = rawdata;
+      _fbstoreget: function(e) {
+        var t = e.type,
+            v = e.target.value; // console.log("type, value", t, v);
+
+        if (t == "iron-localstorage-load") {
+          if (v["test"] || v["start"]) {
+            console.log("storage tested from:", e.target.name, e.target.value);
+            this._fb = undefined; // reset, clearing the related storage
+            return;
+          }
+          // console.log("ACTIVATED storage [" + e.target.name+"]", v); //
+          // clear store if ONLINE and new CONFIG defined
+          if (this.fbconf) { // ?condition?
+            this.fbc = null;
+          } else {
+            this.fbc = v;
+          }
         }
-      },
 
-      confDataGet: function(rawdata){ console.log("confDataRaw", rawdata);
-        if (!rawdata) return;
-        if (rawdata.fbprojects) {
-          this.fbcc = rawdata.fbprojects;
+        if (this.fbconf)  {
+          console.log("fb will be setup from config:", this.fbconf );
+          this._fbconf = this.fbconf;    // triggers <fire-base-setup>
         } else {
-          this.fbcc = rawdata;
+
         }
       },
 
-      confError: function(logdata){
-        if (logdata) console.log("confError", logdata);
-      },
+      // initalizes webApp-firebase-instance
+      // from webapp-conf-object
+      _fbInitialize : function(fbc) {
 
-      // activates a webApp-firebase-instance from localStorage
-      _fbActivate : function(appstore) {
-        var fbproject = this.app;
-        if (!appstore) {
-          this._fbInitialize();
-        } else if (appstore && Object.keys(appstore).length) {
-          this._fbRestore(appstore);
-        }
-        if (!this.fb) {
-          console.log("_fbActivate failed for:", this.app);
-          // this._fbInitialize();
-        }
-      },
-
-      // restore from clients webstorage
-      _fbRestore : function(appstore) {  console.log("appstore", appstore);
-        if (appstore["fbproject"]) {
-            var storedfb = appstore["fbproject"];
-            if (!this.fb || (storedfb.name != this.fb.name)) {
-              this.fb =  storedfb; console.log("Restored fbProject", this.fb);
-            }
-        };
-      },
-
-      /* initalizes webApp-firebase-instance(s)
-         in a "multi-fb-env" */
-      _fbInitialize : function(fbcc) {
-        if (fbcc) { console.log("fbcc loaded:", fbcc);
-          this.fbcc = fbcc;
-        } else if (!this.fbcc) {
-          console.log("ALERT. SETUP MISSING fb-configuration from DEMO", this.fbcc, "req", this.req);
-          // this.fbcc = fbccTest;
-          return;
-        }
-
-        if(!this.app) {
-          var keys = Object.keys(this.fbcc); console.log(keys);
-          this.app = keys[0];
-        } console.log("initializing project:", this.app, this.fbcc);
-
-        if (this.fb && (fb.name == this.app)) {
-          console.log("ALERT!","fb2Initialize already exists: " + fb.name);
-          fb.delete();
-        }
-
-        var fbc = this.fbcc[this.app]; // FireBaseConfig
+        var getAuth = this._getAuth;
 
         if (!fbc) {
           // this.fb = null;
           return;
-        } console.log("_fbInitialize. fb=" + this.app, this.fb);
+        } console.log("fb-Initialize from:", fbc);
+
+        if (this.fb) {
+          if (fb.name == this.app) {
+            console.log("ALERT!", "requested fb-project is already connected:" + fb.name);
+            return;
+          } else {
+            this.fb.delete();
+            // this._fb = null;
+          }
+        }
 
         // Initialize and Auth
         if (!this.fb || !Object.keys(this.fb).length) {
-          var fb = firebase.initializeApp(fbc, this.app); console.log("_fb Initialized: " + fb.name);
-          this._getAuth(fb);
-        }
+          var fb   = firebase.initializeApp(fbc, this.app); console.log("fb inited:", fb.name);
+          var that = this;
+
+          //Promise.resolve(fb)
+          //       .then(function(fb){
+          //          return getAuth(fb);
+          //        })
+          getAuth(fb).then(function(fb){ console.log("fb authed:", fb.name);
+                       that.fb  = fb;
+                       // that._fb = fb; //  is "recursive": cannot be stored
+                     })
+                     .catch(function(err){
+                       console.log("auth-error", err);
+                     });
+        } console.log("fb-auth started");
+
       },
 
-      /* fb authorization (signin, signup)*/
+      /* fb authorization (signin, signup) as PROMISE */
 
       _getAuth: function(fb, authmode, email, password) {
 
-        // 1. check current user
-        var auth = fb.auth();
-        if (auth.currentuser) { console.log("curent user=", auth.currentuser);
-          this.user = auth.currentuser;
-          return;
-        }
-
-        // 2. get authMode
-        if (!authmode) {
-          authmode = this.authmode;
-        } else {
-          if (!email)    email    = this.email;
-          if (!password) password = this.password;
-          if (email && password)  authmode=="email";
-        }
-
-        if (!authmode) authmode ="anonym";  // console.log("_getAuth for authmode, email, password", authmode, email, password);
-
-        // 3. signIn
         var that = this;
-        function signinOK(fb, user, msg) { // console.log(that);
-          that.user = user;                // F1: toggle-enable for additional gui-elements, fi.uploadbutton
-          that.fb = fb;                    // F2: Activate this fb-access
-          if (!that.appstore) that.appstore = {};
-          that.appstore["fbproject"] = fb; // F3: Store into appstore
-          console.log(msg+' SignIn Success for project:', fb);
-        }
-        function signinError(error) {
-          console.error('SignIn Error:', error);
-          // that.user = null;
-          // that.fb   = null;
-        }
 
-        if (authmode == "anonym") {
-          // Sign the user in anonymously since accessing Storage requires the user to be authorized.
-          auth.signInAnonymously()
-              .then(function(user){
-                signinOK(fb, user, 'Anonymous');
-              })
-              .catch(function(error) {
-                signinError(error, that);
-              });
-        }
+        return new Promise(function(resolve, reject){
 
-        if (authmode == "email") {
-          authmode = "email";
-          auth.signInWithEmailAndPassword(email, password)
-              .then(function(user){
-                signinOK(fb, user, 'Email');
-              })
-              .catch(function(error) {
-                signinError(error);
-              });
-        }
+          // 1. check current user
+          var auth = fb.auth();
+          if (auth.currentuser) { console.log("curent user=", auth.currentuser);
+            that.user = auth.currentuser;
+            return;
+          }
 
-        // Default: "popup for GoogleAccount"
-        if (authmode == "popup") { // Default = "GoogleAuth"
-          auth.signInWithPopup()
-              .then(function(user){
-                signinOK(fb, user, 'Popup');
-              })
-              .catch(function(error) {
-                signinError(error);
-              });
-        }
+          // 2. get authMode
+          if (!authmode) {
+            authmode = that.authmode;
+          } else {
+            if (!email)    email    = that.email;
+            if (!password) password = that.password;
+            if (email && password)  authmode=="email";
+          }
+
+          if (!authmode) authmode ="anonym";  // console.log("_getAuth for authmode, email, password", authmode, email, password);
+
+          // 3. signIn
+
+          function signinOK(fb, user, msg) { // console.log(that);
+            that.user = user;                // F1: toggle-enable for additional gui-elements, fi.uploadbutton
+            // that.fb = fb;                 // F2: Activate this fb-access
+            console.log(msg + 'SignIn Success for fb-project:', fb.name);
+            // return new Promise.resolve(fb);
+          }
+
+          function signinError(error) {
+            console.error('SignIn Error:', error);
+            // return new Promise();
+            // that.user = null;
+            // that.fb   = null;
+          }
+
+          if (authmode == "anonym") {
+            // Sign the user in anonymously since accessing Storage requires the user to be authorized.
+            auth.signInAnonymously()
+                .then(function(user){
+                  signinOK(fb, user, 'Anonymous');
+                  resolve(fb);
+                })
+                .catch(function(error) {
+                  reject(error)
+                  // return signinError(error, that);
+                });
+          }
+
+          if (authmode == "email") {
+            authmode = "email";
+            auth.signInWithEmailAndPassword(email, password)
+                .then(function(user){
+                  signinOK(fb, user, 'Email');
+                })
+                .catch(function(error) {
+                  signinError(error);
+                });
+          }
+
+          // Default: "popup for GoogleAccount"
+          if (authmode == "popup") { // Default = "GoogleAuth"
+            auth.signInWithPopup()
+                .then(function(user){
+                  signinOK(fb, user, 'Popup');
+                })
+                .catch(function(error) {
+                  signinError(error);
+                });
+          }
+
+        })
       }
-
     });
   </script>
 </dom-module>
